@@ -1,0 +1,1286 @@
+---
+title: Machine Learning for Uplift
+author: Duyen Tran
+
+---
+
+
+#### Model used in this project:
+
+- Logistic Regression
+- Random Forest
+- XGBoost
+- Neural Network
+
+This project will provide insights into the relative strengths and weaknesses of each modeling approach in the context of direct marketing, with a particular focus on maximizing the return on investment for marketing campaigns.
+
+#### Short process:
+
+- Executing a comprehensive analysis of predictive modeling techniques to refine customer targeting strategies. The techniques under comparison include logistic regression, neural networks, random forests, and XGBoost.
+
+- Implementing uplift modeling to evaluate the additional impact of targeting specific customers with marketing efforts.
+
+- Employing propensity scoring methods to estimate the probability of customer responses based on historical interaction data.
+
+- Main objective: Identify the modeling technique that most effectively pinpoints the top 30,000 customers from a pool of 120,000 who would yield the highest profit when targeted.
+
+- Uplift modeling is pivotal in understanding the causal effect of the marketing action, whereas the propensity score approach focuses on the predicted likelihood of customer behavior.
+
+- Post-identification of the top-performing model, an additional objective is to analyze and establish the most profitable segment size for targeting purposes, potentially adjusting the initial 30,000 target figure to optimize outreach and profitability.
+
+The results from this study aim to guide marketing strategies, ensuring resource allocation is both efficient and effective.
+
+The findings are expected to serve as a decision-making framework for marketing leaders in optimizing campaign strategies and improving customer engagement and retention.
+
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import pyrsm as rsm
+from sklearn.model_selection import GridSearchCV
+# setup pyrsm for autoreload
+%reload_ext autoreload
+%autoreload 2
+%aimport pyrsm
+```
+
+```{python}
+## loading the organic data - this dataset must NOT be changed
+cg_organic_control = pd.read_parquet("cg_organic_control.parquet").reset_index(drop=True)
+cg_organic_control.head()
+```
+
+```{python}
+rsm.md("cg_organic_control_description.md")
+```
+
+```{python}
+## loading the treatment data
+cg_ad_treatment = pd.read_parquet("cg_ad_treatment.parquet").reset_index(drop=True)
+cg_ad_treatment.head()
+```
+
+```{python}
+rsm.md("cg_ad_treatment_description.md")
+```
+
+```{python}
+# Load the ad random data"
+cg_ad_random = pd.read_parquet("cg_ad_random.parquet")
+cg_ad_random
+```
+
+## Part I: Uplift Modeling Using Machine Learning
+
+### 1. Prepare the data
+
+```{python}
+# a. Add "ad" to cg_ad_random and set its value to 1 for all rows
+cg_ad_random["ad"] = 1
+cg_ad_random
+```
+
+```{python}
+# b. Add "ad" to cg_organic_control and set its value to 0 for all rows
+cg_organic_control["ad"] = 0
+cg_organic_control
+```
+
+```{python}
+# c. Create a stacked dataset by combining cg_ad_random and cg_organic_control
+cg_rct_stacked = pd.concat([cg_ad_random, cg_organic_control], axis=0)
+cg_rct_stacked
+```
+
+```{python}
+cg_rct_stacked['converted_yes']= rsm.ifelse(
+    cg_rct_stacked.converted == "yes", 1, rsm.ifelse(cg_rct_stacked.converted == "no", 0, np.nan)
+)
+cg_rct_stacked
+```
+
+```{python}
+# d. Create a training variable
+cg_rct_stacked['training'] = rsm.model.make_train(
+    data=cg_rct_stacked, test_size=0.3, strat_var=['converted', 'ad'], random_state = 1234)
+
+# Check the proportions of the training variable
+cg_rct_stacked.training.value_counts(normalize=True)
+```
+
+```{python}
+pd.crosstab(cg_rct_stacked.converted, [cg_rct_stacked.ad, cg_rct_stacked.training]).round(2)
+```
+
+```{python}
+len(cg_rct_stacked.query('training == 0 & ad == 0'))
+```
+
+```{python}
+len(cg_rct_stacked.query('training == 0 & ad == 1'))
+```
+
+```{python}
+# e. Check if the proportion of the training variable is similar across the ad and control groups
+pd.crosstab(
+    cg_rct_stacked.converted, [cg_rct_stacked.ad, cg_rct_stacked.training], normalize="columns"
+).round(3)
+```
+
+### Using Logistic Regression
+
+#### 2. Train an uplift model
+
+```{python}
+# Assign variables to evar
+evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ]
+```
+
+```{python}
+lr_treatment = rsm.model.logistic(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+)
+lr_treatment.summary()
+```
+
+```{python}
+lr_control = rsm.model.logistic(
+    data={'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar
+)
+lr_control.summary()
+```
+
+#### Create predictions
+
+```{python}
+cg_rct_stacked["pred_treatment"] = lr_treatment.predict(cg_rct_stacked)["prediction"]
+cg_rct_stacked["pred_control"] = lr_control.predict(cg_rct_stacked)["prediction"]
+```
+
+```{python}
+pred_store = pd.DataFrame({
+    "pred_treatment": cg_rct_stacked.pred_treatment,
+    "pred_control": cg_rct_stacked.pred_control
+})
+pred_store
+```
+
+```{python}
+cg_rct_stacked["uplift_score"] = (
+    cg_rct_stacked.pred_treatment - cg_rct_stacked.pred_control
+)
+```
+
+#### 3. Calculate the Uplift and Incremental Uplift
+
+```{python}
+uplift_tab = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+)
+uplift_tab
+```
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+)
+```
+
+- The curve starts at 0% uplift when 0% of the population is targeted (as expected, because no one has been exposed to the campaign).
+
+- As the percentage of the targeted population increases, the incremental uplift also increases, suggesting that targeting more of the population is yielding positive results.
+
+- The curve rises sharply at first, indicating that initially targeting the most responsive segments of the population yields significant uplift.
+
+- After reaching a peak (which seems to be just under 80% of the population targeted), the incremental uplift begins to plateau or decrease slightly, suggesting that beyond this point, targeting additional segments of the population adds less value or could potentially include less responsive or non-responsive individuals.
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+)
+```
+
+- The first decile (the top 10% predicted to be most responsive) shows the highest uplift, above 20%.
+
+- The uplift decreases across subsequent deciles, which is consistent with the expectation that the first deciles contain the most responsive individuals.
+
+- There is a noticeable decline in uplift as we move to higher deciles. The uplift becomes negative in the last deciles, indicating that targeting these segments would result in worse outcomes than if they were not targeted at all.
+
+- Negative uplift in the later deciles could indicate that the campaign has a counterproductive effect on these individuals or that they would have been better or equally likely to take the desired action without the campaign intervention.
+
+#### 4. Use the incremental_resp to calculate the profits
+
+```{python}
+price = 14.99
+cost = 1.5
+```
+
+```{python}
+target_row = uplift_tab[uplift_tab['cum_prop'] <= 0.25].iloc[-1]
+target_row
+```
+
+```{python}
+# Define the function to calculate the profit
+def prof_calc(data, price = 14.99, cost = 1.5):
+    # Given variables
+    target_customers = 30000
+    target_prop = 30000 / 120000
+
+    # Calculate the scale factor
+    scale_factor = 120000 / 9000
+
+    # Calculate the expected incremental customers and profits
+    target_row = data[data['cum_prop'] <= target_prop].iloc[-1]
+    profit = (price*target_row['incremental_resp'] - cost * target_row['T_n']) * scale_factor
+    return profit
+```
+
+```{python}
+uplift_profit_logit = prof_calc(uplift_tab, 14.99, 1.5)
+uplift_profit_logit
+```
+
+#### 5. Calculate the uplift and Increatmental Uplift for Propensity Model
+
+```{python}
+propensity_tab = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+propensity_tab
+```
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+```
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), 
+    "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+
+```
+
+#### Compare Uplift model and Propensity model
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment", "uplift_score"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- Uplift Model Performance: The line for the uplift_score generally lies above the line for the pred_treatment, indicating that the uplift model consistently provides a higher incremental uplift across the different percentages of the population targeted.
+
+- Diminishing Returns: Both lines show a trend of diminishing returns as more of the population is targeted, with the incremental uplift peaking and then plateauing or slightly decreasing, suggesting an optimal targeting point before 100%.
+
+- Comparison: The propensity model appears to perform better than random targeting (which would be a straight line from the origin), but the uplift model is more effective in achieving incremental gains. This suggests that while the propensity model can identify likely responders, the uplift model is better at identifying those for whom the treatment would make a difference in their behavior.
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment", "uplift_score"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- Uplift Distribution: Both sets of bars show a decrease in uplift as we move through the population segments, which is expected as the most responsive individuals are often targeted first.
+
+- Model Comparison: In some segments, the uplift_score bars are higher than the pred_treatment bars, reinforcing the idea that the uplift model is more effective in certain segments.
+
+- Negative Uplift: Towards the latter segments, both models show negative uplift, but the uplift_score model tends to have less severe negative values. The uplift model places customers with high incrementality in earlier deciles. The incrementality is lower for propensity model because it targets Persuadables and Sure Things whereas the uplift model targets only the former. This suggests that the uplift model may be better at minimizing the risk of targeting individuals who would have a negative response to the treatment.
+
+That said, the propensity model still performs well here; this is because the customers who have the best propensity also tend to have the best uplift in this data:
+
+```{python}
+cm = rsm.correlation(
+    {"cg_rct_stacked": cg_rct_stacked.loc[cg_rct_stacked.training == 0, "pred_treatment": "uplift_score"]})
+cm.summary()
+```
+
+The positive correlation between pred_treatment and uplift_score is in line with what we would expect, as a higher predicted treatment response should correspond with a higher uplift score. The negative correlation between pred_control and uplift_score suggests that individuals who are likely to respond without any intervention (as predicted by the control model) are properly being identified as not contributing to uplift, which is a desirable feature of a good uplift model.
+
+#### 6. Use the incremental_resp to calculate the profits for Propensity Model
+
+```{python}
+propensity_profit_logit = prof_calc(propensity_tab, 14.99, 1.5)
+propensity_profit_logit
+```
+
+```{python}
+# Difference in profits from using uplift model and propensity model
+difference_logit = uplift_profit_logit - propensity_profit_logit
+difference_logit
+```
+
+### Using Neural Network
+
+#### 2. Train an uplift model
+
+```{python}
+clf_treatment = rsm.model.mlp(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    hidden_layer_sizes = (1, ),
+    alpha = 0.1
+)
+clf_treatment.summary()
+    
+```
+
+#### Model Tuning
+
+```{python}
+hls = [(1,), (2,), (3,), (3, 3), (4, 2), (5, 5), (5,), (10,), (5,10), (10,5)]
+alpha = [0.0001, 0.001, 0.01, 0.1, 1]
+
+
+param_grid = {"hidden_layer_sizes": hls, "alpha": alpha}
+scoring = {"AUC": "roc_auc"}
+
+clf_cv_treatment = GridSearchCV(
+    clf_treatment.fitted, param_grid, scoring=scoring, cv=5, n_jobs=4, refit="AUC", verbose=5
+)
+```
+
+```{python}
+clf_cv_treatment.fit(clf_treatment.data_onehot, clf_treatment.data.converted_yes)
+```
+
+```{python}
+clf_cv_treatment.best_params_
+```
+
+```{python}
+clf_treatment = rsm.model.mlp(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    **clf_cv_treatment.best_params_
+)
+clf_treatment.summary()
+    
+```
+
+```{python}
+clf_control = rsm.model.mlp(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    hidden_layer_sizes = (1, ),
+    alpha = 0.0001
+)
+clf_control.summary()
+```
+
+```{python}
+# Model tunning
+clf_cv_control = GridSearchCV(
+    clf_control.fitted, param_grid, scoring=scoring, cv=5, n_jobs=4, refit="AUC", verbose=5
+)
+clf_cv_control.fit(clf_control.data_onehot, clf_control.data.converted_yes)
+```
+
+```{python}
+clf_cv_control.best_params_
+```
+
+```{python}
+clf_control = rsm.model.mlp(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    **clf_cv_control.best_params_
+)
+clf_control.summary()
+```
+
+```{python}
+cg_rct_stacked["pred_treatment_nn"] = clf_treatment.predict(cg_rct_stacked)["prediction"]
+cg_rct_stacked["pred_control_nn"] = clf_control.predict(cg_rct_stacked)["prediction"]
+```
+
+#### 3. Calculate the Uplift and Incremental Uplift
+
+```{python}
+cg_rct_stacked["uplift_score_nn"] = (
+    cg_rct_stacked.pred_treatment_nn - cg_rct_stacked.pred_control_nn
+)
+```
+
+```{python}
+uplift_tab_nn = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+)
+uplift_tab_nn
+```
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+)
+```
+
+- The curve starts at the origin and increases as more of the population is targeted, reaching a peak before it starts to plateau. This indicates that the campaign has diminishing returns; after a certain point, targeting additional people results in smaller incremental gains.
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+)
+```
+
+This pattern indicates that the first segments are highly responsive to the campaign, while the later segments may have been negatively influenced by the campaign or would have been better off not being targeted at all.
+
+#### 4. Using the incremental_resp to calculate the profits for Uplift model
+
+```{python}
+uplift_profit_nn = prof_calc(uplift_tab_nn, 14.99, 1.5)
+uplift_profit_nn
+```
+
+#### 5. Calculate the uplift and Increatmental Uplift for Propensity Model
+
+```{python}
+prop_tab_nn = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_nn", "ad", 1, qnt = 20
+)
+prop_tab_nn
+```
+
+#### Compare Uplift model and Propensity model
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_nn", "uplift_score_nn"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- The uplift_score_nn line generally lies above the pred_treatment_nn line, indicating that the uplift model predicts a higher incremental uplift across the different segments of the targeted population.
+
+- Both lines show a rise in incremental uplift with an increase in the targeted population, reaching a peak, and then beginning to plateau, suggesting a point of diminishing returns.
+
+- The uplift model's curve suggests that targeting based on its scores leads to higher incremental gains compared to the propensity model, which is likely predicting the likelihood of response to the treatment without considering the control group's response.
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_nn", "uplift_score_nn"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- The uplift decreases from the first to the last segment, which suggests that the initial segments are the most responsive to the targeting.
+The treatment model shows positive uplift in the early segments but drops off more sharply than the uplift model in later segments, indicating that the treatment model might be less effective at distinguishing between those who will respond due to the treatment and those who would have responded anyway.
+
+- The uplift model has a more gradual decline in uplift across segments and less negative uplift in the lower segments, which could imply that it is more effective at targeting the right individuals.
+
+- The negative values in later segments for both models suggest that certain individuals are either not influenced by or negatively influenced by the treatment. This could represent individuals who might purchase or respond anyway, so the propensity might have been an unnecessary expense for this group, or it could represent a group for whom the treatment had an adverse effect.
+
+#### 6. Using the Incremental_resp to calculate the profits for Propensity Model
+
+```{python}
+propensity_profit_nn = prof_calc(prop_tab_nn, 14.99, 1.5)
+propensity_profit_nn
+```
+
+```{python}
+# Different profit between Uplift model and Propensity model
+difference_nn = uplift_profit_nn - propensity_profit_nn
+difference_nn
+```
+
+### Using Random Forest Model
+
+#### 2. Train an uplift model
+
+```{python}
+rf_treatment = rsm.model.rforest(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+)
+rf_treatment.summary()
+    
+```
+
+#### Model Tuning
+
+```{python}
+max_features = [None, 'auto', 'sqrt', 'log2', 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0]
+n_estimators = [10, 50, 100, 200, 500, 1000]
+
+
+param_grid = {"max_features": max_features, "n_estimators": n_estimators}
+scoring = {"AUC": "roc_auc"}
+
+rf_cv_treatment = GridSearchCV(rf_treatment.fitted, param_grid, scoring=scoring, cv=5, n_jobs=4, refit="AUC", verbose=5)
+```
+
+```{python}
+rf_cv_treatment.fit(rf_treatment.data_onehot, rf_treatment.data.converted_yes)
+```
+
+```{python}
+rf_cv_treatment.best_params_
+```
+
+```{python}
+rf_treatment = rsm.model.rforest(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    **rf_cv_treatment.best_params_
+)
+rf_treatment.summary()
+```
+
+```{python}
+rf_control = rsm.model.rforest(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+)
+rf_control.summary()
+```
+
+#### Model Tuning
+
+```{python}
+rf_cv_control = GridSearchCV(rf_control.fitted, param_grid, scoring=scoring, cv=5, n_jobs=4, refit="AUC", verbose=5)
+rf_cv_control.fit(rf_control.data_onehot, rf_control.data.converted_yes)
+```
+
+```{python}
+rf_cv_control.best_params_
+```
+
+```{python}
+rf_control = rsm.model.rforest(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    **rf_cv_control.best_params_
+)
+rf_control.summary()
+```
+
+```{python}
+# Predictions
+cg_rct_stacked["pred_treatment_rf"] = rf_treatment.predict(cg_rct_stacked)["prediction"]
+cg_rct_stacked["pred_control_rf"] = rf_control.predict(cg_rct_stacked)["prediction"]
+```
+
+```{python}
+cg_rct_stacked["uplift_score_rf"] = (
+    cg_rct_stacked.pred_treatment_rf - cg_rct_stacked.pred_control_rf
+)
+```
+
+#### 3. Calculate the Uplift and Incremental Uplift
+
+```{python}
+uplift_tab_rf = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+)
+uplift_tab_rf
+```
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+)
+```
+
+- The curve starts at 0% uplift when 0% of the population is targeted, which is expected as no one has yet been exposed to the campaign.
+
+- As the percentage of the targeted population increases, the incremental uplift also increases. This indicates that targeting more of the population is initially resulting in a higher incremental gain.
+
+- The curve shows a steep initial growth in uplift as the targeting begins, suggesting that the early segments of the population targeted are highly responsive to the campaign.
+
+- After a certain point, the rate of increase in incremental uplift starts to diminish. This is seen as the curve begins to flatten, suggesting that the additional gains from targeting more of the population are decreasing.
+
+- The curve reaches a peak and then plateaus, indicating that there is an optimal point of targeting beyond which the incremental benefits do not increase significantly. This is typically where the marketer would aim to stop targeting additional customers to maximize efficiency and return on investment.
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+)
+```
+
+- The first few bars show a positive uplift, with the first bar indicating an uplift of approximately 30%. This suggests that the first segment of the population (likely the top 5% or 10%) responded very well to the intervention.
+
+- As moving right along the x-axis, the uplift decreases. This is expected as typically, the individuals most likely to respond are targeted first, and as moving through the population, the less responsive individuals are included.
+
+- Eventually, the uplift drops to 0% and then becomes negative. The negative bars at the end suggest that targeting those segments of the population may have been counterproductive, either because the intervention had an adverse effect or because it was an unnecessary expense for those individuals who might have taken the desired action without any intervention.
+
+- The most negative bar, located towards the right end of the chart, indicates a significant negative impact on that segment. This might represent a group that was either deterred by the campaign or where the cost of targeting outweighed the benefits.
+
+#### 4. Using the incremental_resp to calculate the profits for Uplift model
+
+```{python}
+uplift_profit_rf = prof_calc(uplift_tab_rf, 14.99, 1.5)
+uplift_profit_rf
+```
+
+#### 5. Calculate the uplift and Increatmental Uplift for Propensity Model
+
+```{python}
+prop_tab_rf = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_rf", "ad", 1, qnt = 20
+)
+```
+
+#### Compare Uplift model and Propensity model
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_rf", "uplift_score_rf"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- Uplift Model: The line representing uplift_score_rf is consistently above the pred_treatment_rf line, suggesting that the uplift model identifies individuals who will respond to the treatment more effectively than the propensity model alone. This indicates that using the uplift model, the campaign would yield a higher incremental gain across the targeted population segments.
+
+- Propensity Model: The pred_treatment_rf line shows that the propensity model does predict some level of uplift, but it is lower compared to the uplift model. This implies that while the propensity model identifies individuals likely to respond to the treatment, it does not do so as effectively as the uplift model when it comes to maximizing incremental uplift.
+
+- Diminishing Returns: Both models show an increase in incremental uplift as a larger percentage of the population is targeted, but the rate of increase slows down, and both lines begin to plateau. This indicates diminishing returns; beyond a certain point, targeting additional segments of the population yields progressively smaller increases in uplift.
+
+- Optimal Targeting Point: The point at which the curves start to plateau suggests the optimal targeting point for the campaign. Beyond this point, the additional cost of targeting more individuals may not be justified by the incremental gains.
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_rf", "uplift_score_rf"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- Initial Segments: The first few segments, representing the most responsive parts of the population, show a significant positive uplift for both models. This suggests that both models are effective at identifying the individuals most likely to be influenced by the campaign.
+
+- Decreasing Uplift: As moving to the right, representing a larger share of the population being targeted, the uplift for both models decreases. This is typical in targeted marketing as the most responsive individuals are usually the first ones targeted.
+
+- Negative Uplift: Towards the end segments, both models show negative uplift, which can indicate that targeting these individuals may have a counterproductive effect. It could mean that the campaign is reaching individuals who either would have made a purchase without the campaign or who may be turned off by the campaign.
+
+- Comparison Between Models: In most segments, the uplift_score_rf bars are higher than the pred_treatment_rf bars, suggesting that the uplift model is more effective at identifying which segments of the population will provide a higher incremental uplift when targeted.
+
+#### 6. Using the Incremental_resp to calculate the profits for Propensity Model
+
+```{python}
+propensity_profit_rf = prof_calc(prop_tab_rf, 14.99, 1.5)
+propensity_profit_rf
+```
+
+```{python}
+# Difference in profits from using uplift model and propensity model
+difference_rf = uplift_profit_rf - propensity_profit_rf
+difference_rf
+```
+
+#### Using XGBoost Model
+
+```{python}
+import xgboost as xgb
+# Create X_train, X_test, y_train, y_test for treatment group
+X_train_treatment = cg_rct_stacked.loc[(cg_rct_stacked["training"] == 1) & (cg_rct_stacked["ad"] == 1), evar]
+y_train_treatment = cg_rct_stacked.query("training == 1 & ad == 1").converted_yes
+
+X_test_treatment = cg_rct_stacked.loc[(cg_rct_stacked["training"] == 0) & (cg_rct_stacked["ad"] == 1), evar]
+y_test_treatment = cg_rct_stacked.query("training == 0 & ad == 1").converted_yes
+```
+
+```{python}
+# Setup model
+xgbc_treatment = xgb.XGBClassifier(use_label_encoder=False, eval_metric="logloss", enable_categorical=True)
+xgbc_treatment.fit(X_train_treatment, y_train_treatment)
+
+# Set up and fit GridSearchCV
+param_grid = {
+    'learning_rate': [0.01, 0.05, 0.1, 0.2],
+    'max_depth': [3, 4, 5, 6, 7, 8, 9, 10],
+    'min_child_weight': [1, 2, 3, 4, 5, 6]
+}
+
+xgbc_cv_treatment = GridSearchCV(xgbc_treatment, param_grid, scoring='roc_auc', cv=5, n_jobs=4, verbose=5)
+xgbc_cv_treatment.fit(X_train_treatment, y_train_treatment)
+
+# Retrieve the best parameters and retrain the model
+best_params_treatment = xgbc_cv_treatment.best_params_
+xgbc_treatment = xgb.XGBClassifier(**best_params_treatment, use_label_encoder=False, eval_metric="logloss", enable_categorical=True)
+xgbc_treatment.fit(X_train_treatment, y_train_treatment)
+```
+
+#### For control group
+
+```{python}
+# Create X_train, X_test, y_train, y_test for control group
+X_train_control = cg_rct_stacked.loc[(cg_rct_stacked["training"] == 1) & (cg_rct_stacked["ad"] == 0), evar]
+y_train_control = cg_rct_stacked.query("training == 1 & ad == 0").converted_yes
+
+X_test_control = cg_rct_stacked.loc[(cg_rct_stacked["training"] == 0) & (cg_rct_stacked["ad"] == 0), evar]
+y_test_control = cg_rct_stacked.query("training == 0 & ad == 0").converted_yes
+```
+
+```{python}
+# Use the same param_grid as the treatment group
+xgbc_control = xgb.XGBClassifier(use_label_encoder=False, eval_metric="logloss", enable_categorical=True)
+
+# Set up and fit GridSearchCV
+xgbc_cv_control = GridSearchCV(xgbc_control, param_grid, scoring='roc_auc', cv=5, n_jobs=4, verbose=5)
+xgbc_cv_control.fit(X_train_control, y_train_control)
+
+# Retrieve the best parameters and retrain the model
+best_params_control = xgbc_cv_control.best_params_
+xgbc_control = xgb.XGBClassifier(**best_params_control, use_label_encoder=False, eval_metric="logloss", enable_categorical=True)
+xgbc_control.fit(X_train_control, y_train_control)
+```
+
+```{python}
+X_full = cg_rct_stacked[evar]
+cg_rct_stacked["pred_treatment_xgb"] = xgbc_treatment.predict_proba(X_full)[:, 1]
+cg_rct_stacked["pred_control_xgb"] = xgbc_control.predict_proba(X_full)[:, 1]
+```
+
+#### 3. Calculate the Uplift and Incremental Uplift
+
+```{python}
+cg_rct_stacked["uplift_score_xgb"] = (
+    cg_rct_stacked.pred_treatment_xgb - cg_rct_stacked.pred_control_xgb
+)
+cg_rct_stacked['uplift_score_xgb']
+```
+
+```{python}
+cg_rct_stacked['uplift_score_xgb'].describe()
+```
+
+```{python}
+uplift_tab_xgb = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_xgb", "ad", 1, qnt = 20
+)
+uplift_tab_xgb
+```
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_xgb", "ad", 1, qnt = 20
+)
+```
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_xgb", "ad", 1, qnt = 20
+)
+```
+
+#### 4. Use the incremental_resp to calculate the profits
+
+```{python}
+uplift_profit_xgb = prof_calc(uplift_tab_xgb, 14.99, 1.5)
+uplift_profit_xgb
+```
+
+#### 5. Calculate the uplift and Increatmental Uplift for Propensity Model
+
+```{python}
+propensity_tab_xgb = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_xgb", "ad", 1, qnt = 20)
+propensity_tab_xgb
+```
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_xgb", "ad", 1, qnt = 20)
+```
+
+- The curve starts at 0% uplift when 0% of the population is targeted, which makes sense as no one has yet been exposed to the campaign.
+
+- As the percentage of the targeted population increases, the incremental uplift also increases. This indicates that targeting more of the population is initially resulting in higher incremental gains.
+
+- The curve shows a steep rise in incremental uplift at the beginning, suggesting that the early segments of the population targeted are highly responsive to the campaign.
+
+- The rate of increase in incremental uplift begins to slow down as the curve extends towards the right, which suggests diminishing returns; the incremental gains from targeting additional portions of the population decrease.
+
+- The curve eventually starts to plateau, indicating that there is a point at which the incremental benefits do not significantly increase with additional targeting. This plateau represents the point of maximum efficiency in targeting efforts.
+
+The graph is indicative of a typical response to a well-targeted marketing campaign, where the most responsive individuals are targeted first, leading to higher uplifts early on. As less responsive individuals are targeted, the incremental uplift decreases
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), 
+    "converted", "yes", "pred_treatment_xgb", "ad", 1, qnt = 20)
+```
+
+- High Responsiveness in Early Segments: The first few bars are the tallest, indicating the highest uplift. This suggests that the first segment of the population (likely the top 5% or 10%) is the most responsive to the campaign.
+
+- Diminishing Returns: As we move right across the x-axis to include larger percentages of the population, the size of the uplift decreases. This pattern is typical in targeted marketing, where you see the greatest response rate increases in the first few population segments.
+
+- Consistent Drop: The consistent drop-off in uplift as the population segments progress suggests that the most responsive individuals are targeted first, followed by progressively less responsive segments.
+
+- Positive Uplift Across Segments: All the bars are above the 0% line, which indicates that each segment experienced a positive uplift due to the campaign. This means that even the least responsive segments targeted still had a positive response, although it was not as strong as the initial segments.
+
+#### Compare Uplift model and Propensity model
+
+```{python}
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_xgb", "uplift_score_xgb"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- Uplift Model Performance: The uplift_score_xgb curve is consistently above the pred_treatment_xgb curve. This indicates that the uplift model is predicting a higher incremental uplift across the different segments of the targeted population compared to the treatment model.
+
+- Propensity Model: The pred_treatment_xgb curve shows that the propensity model also predicts an increase in incremental uplift with more of the population targeted. However, the uplift is not as high as the one predicted by the uplift model, suggesting that the propensity model might be useful, but not optimal.
+
+- Diminishing Returns: Both models show an initial rapid increase in incremental uplift, which slows and eventually plateaus as the percentage of the population targeted increases. This is indicative of diminishing returns; beyond a certain point, targeting additional people results in smaller increases in incremental uplift.
+
+- Optimal Targeting Point: The curves suggest that there is an optimal point for targeting, after which the incremental benefits of targeting additional individuals begin to decrease. Identifying this point can help optimize marketing efforts and budget allocation.
+
+In short, the uplift_score_xgb model appears to be more effective for targeting the right individuals, likely because it accounts for the incremental effect of the treatment, identifying those who are influenced by the campaign as opposed to those who would respond without it.
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_xgb", "uplift_score_xgb"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+- High Responsiveness in Early Segments: The initial segments show a higher uplift for both models. This indicates that these segments of the population are more responsive to the marketing campaign.
+
+- Decreasing Uplift: As the segments progress from left to right (targeting a larger share of the population), the uplift decreases. This trend is typical in targeted marketing, where the most responsive individuals are usually targeted first.
+
+- Negative Uplift in Later Segments: For the segments on the right, the uplift becomes negative. This could mean that targeting these individuals might be counterproductive, potentially leading to a negative reaction to the marketing campaign or an unnecessary cost for individuals who would have made a purchase without any intervention.
+
+- Comparison Between Models: In most segments, the uplift_score_xgb bars appear to have a higher uplift than the pred_treatment_xgb bars, suggesting that the uplift model is more effective at identifying which segments of the population will provide a higher incremental uplift when targeted.
+
+#### 6. Use the incremental_resp to calculate the profits for Propensity Model
+
+```{python}
+propensity_profit_xgb = prof_calc(propensity_tab_xgb, 14.99, 1.5)
+propensity_profit_xgb
+```
+
+```{python}
+# Difference in profits from using uplift model and propensity model
+difference_xgb = uplift_profit_xgb - propensity_profit_xgb
+difference_xgb
+```
+
+#### Results
+
+```{python}
+mod_perf = pd.DataFrame({
+    "model": ["Logistic", "Neural Network", "Random Forest", "XGBoost"],
+    "incremental_profit_uplift": [uplift_profit_logit, uplift_profit_nn, uplift_profit_rf, uplift_profit_xgb],
+    "incremental_profit_propensity": [propensity_profit_logit, propensity_profit_nn, propensity_profit_rf, propensity_profit_xgb],
+    "difference": [difference_logit, difference_nn, difference_rf, difference_xgb]
+})
+mod_perf.sort_values("difference", ascending=False)
+```
+
+```{python}
+incremental_profit_dct = {
+    "Logistic": uplift_profit_logit,
+    "Neural Network": uplift_profit_nn,
+    "Random Forest": uplift_profit_rf,
+    "XGBoost": uplift_profit_xgb
+}
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(incremental_profit_dct.items()), columns=['Model', 'IncrementalProfit'])
+plt.figure(figsize=(12, 5))  # Adjust the width and height to your preference
+# Plot
+sns.set(style="white")
+ax = sns.barplot(x="Model", y="IncrementalProfit", data=df, palette="magma")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.IncrementalProfit, f'${row.IncrementalProfit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Incremental Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Incremental Profit by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45)  # Rotate x labels for better readability
+plt.show()
+```
+
+```{python}
+difference_dct = {
+    "Logistic": difference_logit,
+    "Neural Network": difference_nn,
+    "Random Forest": difference_rf,
+    "XGBoost": difference_xgb
+}
+
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(difference_dct.items()), columns=['Model', 'IncrementalProfit'])
+plt.figure(figsize=(12, 5))  # Adjust the width and height to your preference
+# Plot
+sns.set(style="white")
+ax = sns.barplot(x="Model", y="IncrementalProfit", data=df, palette="magma")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.IncrementalProfit, f'${row.IncrementalProfit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Incremental Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Difference by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45)  # Rotate x labels for better readability
+plt.show()
+```
+
+### Part II
+
+#### 1. What formula would you use to select customers to target using a propensity model if your goal is to maximize expected profits?
+
+To select customers to target using a propensity to buy model with the goal of maximizing our expected profits, we want to use a formula that incorporates both the propensity to buy and the expected profit from each customer if they do purchase. This approach allows the prioritization of customers not just based on their likelihood to buy, but also on the value they bring. The propensity model is a more general approach that can be used to predict the likelihood of a customer to purchase a product or service. The formula to select customers to target using a propensity model if the goal is to maximize expected profits is as follows:
+
+$$
+\text{Customers to target} = (\text{price}* {pred_i} - \text{cost}) > 0
+$$
+
+```{python}
+price = 14.99
+cost = 1.50
+```
+
+```{python}
+def round_to_nearest_5(x):
+    return round(x*20) / 20
+```
+
+```{python}
+# Run the function accross all models and predictions
+models = ['logit', 'nn', 'rf', 'xgb']
+predictions = ['pred_treatment', 'pred_treatment_nn', 'pred_treatment_rf', 'pred_treatment_xgb']
+
+# Define optimization function for profit
+def propensity_prof_opt(data, price = 14.99, cost = 1.5):
+    total_customers = 120000
+    result = []
+    for model, prediction in zip(models, predictions):
+        data['EP'] = data[prediction] * price - cost
+        data['ads_logit'] = data['EP'] > 0
+        perc = np.nanmean(data['ads_logit'])
+        target_customers = perc * total_customers
+        rounded_perc = round_to_nearest_5(perc)
+        result.append([model, perc, rounded_perc, target_customers])
+    return pd.DataFrame(result, columns = ['model','perc_customer', 'rounded_perc', 'target_customers']).sort_values('perc_customer', ascending = False)
+
+propensity_prof_opt = propensity_prof_opt(cg_rct_stacked.query("training == 1 & ad == 1"))
+propensity_prof_opt
+```
+
+Therefore, we want to target customers using logit propensity model for each tuned model to maximize the expected profits.
+
+- Logistic Regression Model: 57,422 customers
+
+- Neural Network Model: 54,005 customers
+
+- Random Forest Model: 27222 customers
+
+- XGBoost Model: 58,268 customers
+
+#### Uplift Expected Profit
+
+If we wanted to target customers using an uplift model, we will select customers with the highest predicted uplift scores, where uplift is the incremental impact of the treatment (e.g., receiving an ad) on the customer's probability of making a purchase.
+
+<br> 
+The expected incremental profit can be calculated by multiplying the uplift score by the profit per conversion minus the cost of targeting the client. The formula is listed below:
+
+$$
+\text{Customers to target} = ({\text{Uplift Score} * \text{profit per conversion}) - \text{Cost per conversion}}
+$$
+
+The uplift score is calculated by subtracting the probability of the customer to purchase without the treatment from the probability of the customer to purchase with the treatment.
+
+$$
+\text{Uplift Score} = \text{P(Outcome|Treatment)} - \text{P(Outcome|Control)}
+$$
+
+```{python}
+# Optimizing the uplift model profit
+# Run the function accross all models and uplift scores
+models = ['logit', 'nn', 'rf', 'xgb']
+uplift_scores = ['uplift_score', 'uplift_score_nn', 'uplift_score_rf', 'uplift_score_xgb']
+
+# Define optimization function for profit
+def uplift_prof_opt(data, price = 14.99, cost = 1.5):
+    total_customers = 120000
+    result = []
+    for model, uplift_score in zip(models,uplift_scores):
+        data['EIP'] = (data[uplift_score] * price) - cost
+        data['ads_logit'] = data['EIP'] > 0
+        perc = np.nanmean(data['ads_logit'])
+        target_customers = perc * total_customers
+        rounded_perc = round_to_nearest_5(perc)
+        result.append([model, perc, rounded_perc, target_customers])
+    return pd.DataFrame(result, columns = ['model','perc_customer', 'rounded_perc', 'target_customers']).sort_values('perc_customer', ascending = False)
+
+uplift_prof_opt = uplift_prof_opt(cg_rct_stacked.query("training == 1 & ad == 1"))
+uplift_prof_opt
+```
+
+Therefore, we want to target customers using uplift model for each tuned model to maximize the expected profits.
+
+- Logistic Regression Model: 26,628 customers
+
+- Neural Network Model: 36,068 customers
+
+- Random Forest Model: 16,982 customers
+
+- XGBoost Model: 33,965 customers
+
+### Logistic Model
+
+#### 3. Uplift and Propensity Expected Profit
+In questions 1 and 2, we calculated the optimal target of customers. for the propensity and uplift models. When we round to the nearest 5%, we will then use these percentages to calculate the number of customers to target out of the 120K customer base as well as calculate the expected incremental profits.
+
+To calculate the incremental profits we will follow the general steps of: 
+1. Determining the incremental response. As we can see, the `incremental_resp` column shows the additional responses attributed to the treatment of the ad for each bin of customers. 
+2. We will then want to calculate the incremental profits for each bin. To do this, you will multiply the incremental response by the average profit per response, and we will assume an average profit per response value if not provided.
+3. Finally, we will sum the incremental profits across all the bins to get the total incremental profit.
+
+```{python}
+# Define the function to calculate the profit
+def prof_calc_opt(data, total_customers, percent_target, price = 14.99, cost = 1.5):
+    # Given variables
+    target_customers = total_customers * percent_target
+    target_prop = percent_target
+    # Calculate the scale factor
+    scale_factor = 120000 / 9000
+
+    # Calculate the expected incremental customers and profits
+    target_row = data[data['cum_prop'] <= target_prop].iloc[-1]  # Ensure data is sorted if necessary
+    profit = (price * target_row['incremental_resp'] - cost * target_row['T_n']) * scale_factor
+    return profit
+```
+
+```{python}
+# Propensity Model
+propensity_profits_logit = prof_calc_opt(propensity_tab, 120000, 0.5, 14.99, 1.5)
+propensity_profits_logit
+```
+
+```{python}
+# Uplift Model
+uplift_profits_logit = prof_calc_opt(uplift_tab, 120000, 0.2, 14.99, 1.5)
+uplift_profits_logit
+```
+
+```{python}
+logit_mod = pd.DataFrame({
+    "model": ["Uplift", "Propensity"],
+    "incremental_profits": [uplift_profits_logit, propensity_profits_logit]
+})
+logit_mod.sort_values("incremental_profits", ascending=False)
+logit_mod
+```
+
+### Neural Network
+
+```{python}
+# Propensity Model
+propensity_profits_nn = prof_calc_opt(prop_tab_nn, 120000, 0.45, 14.99, 1.5)
+propensity_profits_nn
+```
+
+```{python}
+# Uplift Model
+uplift_profits_nn = prof_calc_opt(uplift_tab_nn, 120000, 0.3, 14.99, 1.5)
+uplift_profits_nn
+```
+
+```{python}
+nn_mod = pd.DataFrame({
+    "model": ["Uplift", "Propensity"],
+    "incremental_profits": [uplift_profits_nn, propensity_profits_nn]
+})
+nn_mod.sort_values("incremental_profits", ascending=False)
+nn_mod
+```
+
+### Random Forest
+
+```{python}
+# Propensity Model
+propensity_profits_rf = prof_calc_opt(prop_tab_rf, 120000, 0.25, 14.99, 1.5)
+propensity_profits_rf
+```
+
+```{python}
+# Uplift Model
+uplift_profits_rf = prof_calc_opt(uplift_tab_rf, 120000, 0.15, 14.99, 1.5)
+uplift_profits_rf
+```
+
+```{python}
+rf_mod = pd.DataFrame({
+    "model": ["Uplift", "Propensity"],
+    "incremental_profits": [uplift_profits_rf, propensity_profits_rf]
+})
+rf_mod.sort_values("incremental_profits", ascending=False)
+rf_mod
+```
+
+### XGBoost Model
+
+```{python}
+# Propensity Model
+propensity_profits_xgb = prof_calc_opt(propensity_tab_xgb, 120000, 0.5, 14.99, 1.5)
+propensity_profits_xgb
+```
+
+```{python}
+# Uplift Model
+uplift_profits_xgb = prof_calc_opt(uplift_tab_xgb, 120000, 0.3, 14.99, 1.5)
+uplift_profits_xgb
+```
+
+```{python}
+xgb_mod = pd.DataFrame({
+    "model": ["Uplift", "Propensity"],
+    "incremental_profits": [uplift_profits_xgb, propensity_profits_xgb]
+})
+xgb_mod.sort_values("incremental_profits", ascending=False)
+xgb_mod
+```
+
+```{python}
+uplift_profit_dct = {
+    "Logit_Uplift": uplift_profits_logit,
+    "NN_Uplift": uplift_profits_nn, 
+    "RF_Uplift": uplift_profits_rf,
+    "XGB_Uplift": uplift_profits_xgb}
+```
+
+```{python}
+propensity_profit_dct = {
+    "Logit_Propensity": propensity_profits_logit,
+    "NN_Propensity": propensity_profits_nn, 
+    "RF_Propensity": propensity_profits_nn,
+    "XGB_Propensity": propensity_profits_xgb}
+```
+
+```{python}
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(uplift_profit_dct.items()), columns=['Model', 'IncrementalProfit'])
+plt.figure(figsize=(12, 5))  # Adjust the width and height to your preference
+# Plot
+sns.set(style="white")
+ax = sns.barplot(x="Model", y="IncrementalProfit", data=df, palette="magma")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.IncrementalProfit, f'${row.IncrementalProfit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Incremental Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Uplift Incremental Profit by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45)  # Rotate x labels for better readability
+plt.show()
+```
+
+```{python}
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(propensity_profit_dct.items()), columns=['Model', 'IncrementalProfit'])
+plt.figure(figsize=(12, 5))  # Adjust the width and height to your preference
+# Plot
+sns.set(style="white")
+ax = sns.barplot(x="Model", y="IncrementalProfit", data=df, palette="magma")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.IncrementalProfit, f'${row.IncrementalProfit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Incremental Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Propensity Incremental Profit by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45)  # Rotate x labels for better readability
+plt.show()
+```
+
+In this situation where the goal is to maximize the total number of conversions, a propensity model shows to be more effective. It targets a broader audience, including those who are already likely to convert without any intervention. The uplift model, on the other hand, targets only those who are likely to convert because of the intervention. This is why the propensity model is more effective in this case.
+
+The propensity model is also used for broad targeting and segmentation, helping to focus resources on high-probability events. The uplift model is used for optimizing marketing campaigns and other interventions by targeting those individuals whose behavior can be positively changed by the intervention, thus maximizing ROI and reducing wastage. This causes the propensity model to capture a higher profit, where as the uplift model captures a higher ROI. 
+
+In essence, while both models are used to enhance decision-making in marketing and other fields, they serve different strategic purposes: propensity models for predicting actions based on existing propensities, and uplift models for identifying the additional impact of a particular action or intervention.
+

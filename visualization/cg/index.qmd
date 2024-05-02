@@ -1,0 +1,356 @@
+---
+title: Machine Learning for Uplift
+format: 
+    dashboard:
+        orientation: rows
+---
+
+# Row
+This is visualization of Uplift
+
+# Row
+
+## Column
+
+```{python}
+#| title: Gains curves for training & test set of logistic regression model
+import pandas as pd
+import numpy as np
+import pyrsm as rsm
+from sklearn.model_selection import GridSearchCV
+
+cg_organic_control = pd.read_parquet("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/cg/cg_organic_control.parquet").reset_index(drop=True)
+
+
+## loading the treatment data
+cg_ad_treatment = pd.read_parquet("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/cg/cg_ad_treatment.parquet").reset_index(drop=True)
+
+
+# Load the ad random data"
+cg_ad_random = pd.read_parquet("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/cg/cg_ad_random.parquet")
+
+# a. Add "ad" to cg_ad_random and set its value to 1 for all rows
+cg_ad_random["ad"] = 1
+
+# b. Add "ad" to cg_organic_control and set its value to 0 for all rows
+cg_organic_control["ad"] = 0
+
+# c. Create a stacked dataset by combining cg_ad_random and cg_organic_control
+cg_rct_stacked = pd.concat([cg_ad_random, cg_organic_control], axis=0)
+
+cg_rct_stacked['converted_yes']= rsm.ifelse(
+    cg_rct_stacked.converted == "yes", 1, rsm.ifelse(cg_rct_stacked.converted == "no", 0, np.nan)
+)
+
+
+# d. Create a training variable
+cg_rct_stacked['training'] = rsm.model.make_train(
+    data=cg_rct_stacked, test_size=0.3, strat_var=['converted', 'ad'], random_state = 1234)
+
+# Assign variables to evar
+evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ]
+
+lr_treatment = rsm.model.logistic(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+)
+
+lr_control = rsm.model.logistic(
+    data={'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar
+)
+
+cg_rct_stacked["pred_treatment"] = lr_treatment.predict(cg_rct_stacked)["prediction"]
+cg_rct_stacked["pred_control"] = lr_control.predict(cg_rct_stacked)["prediction"]
+
+cg_rct_stacked["uplift_score"] = (
+    cg_rct_stacked.pred_treatment - cg_rct_stacked.pred_control
+)
+
+uplift_tab = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+)
+
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+)
+```
+
+## Column
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+)
+```
+
+# Row
+
+## Column
+
+```{python}
+price = 14.99
+cost = 1.5
+
+target_row = uplift_tab[uplift_tab['cum_prop'] <= 0.25].iloc[-1]
+
+# Define the function to calculate the profit
+def prof_calc(data, price = 14.99, cost = 1.5):
+    # Given variables
+    target_customers = 30000
+    target_prop = 30000 / 120000
+
+    # Calculate the scale factor
+    scale_factor = 120000 / 9000
+
+    # Calculate the expected incremental customers and profits
+    target_row = data[data['cum_prop'] <= target_prop].iloc[-1]
+    profit = (price*target_row['incremental_resp'] - cost * target_row['T_n']) * scale_factor
+    return profit
+
+uplift_profit_logit = prof_calc(uplift_tab, 14.99, 1.5)
+uplift_profit_logit
+
+propensity_tab = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+```
+
+
+```{python}
+#| title: Uplift plot - Proporposity Model
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), 
+    "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+
+```
+
+# Row
+
+## Column
+
+```{python}
+#| title: Compare Uplift model and Propensity model
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment", "uplift_score"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment", "uplift_score"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+# Row
+Neural Network Model
+
+## Column
+
+```{python}
+#| title: Gain plot - Uplift Model
+
+clf_treatment = rsm.model.mlp(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    hidden_layer_sizes = (4, 2),
+    alpha = 0.0001
+)
+
+clf_control = rsm.model.mlp(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    hidden_layer_sizes = (4,2),
+    alpha = 1
+)
+
+cg_rct_stacked["pred_treatment_nn"] = clf_treatment.predict(cg_rct_stacked)["prediction"]
+cg_rct_stacked["pred_control_nn"] = clf_control.predict(cg_rct_stacked)["prediction"]
+
+cg_rct_stacked["uplift_score_nn"] = (
+    cg_rct_stacked.pred_treatment_nn - cg_rct_stacked.pred_control_nn
+)
+
+uplift_tab_nn = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+)
+
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+)
+```
+
+## Column
+
+```{python}
+#| title: Gain plot - Uplift plot
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+)
+```
+
+# Row
+
+## Column
+
+```{python}
+#| title: Gain curves - Comparision Uplift and Propensity Model
+prop_tab_nn = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_nn", "ad", 1, qnt = 20
+)
+prop_tab_nn
+
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_nn", "uplift_score_nn"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+## Column
+
+```{python}
+#| title: Gain plot - Comparision Uplift and Propensity Model
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_nn", "uplift_score_nn"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+# Row
+
+Random Forest
+
+# Row
+
+## Column
+
+```{python}
+#| title: Gain curves - Uplift Model
+
+
+rf_treatment = rsm.model.rforest(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    max_features = 0.25,
+    n_estimators = 1000
+)
+
+rf_control = rsm.model.rforest(
+    data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 0")},
+    rvar = 'converted',
+    lev = 'yes',
+    evar = evar,
+    max_features = 0.25,
+    n_estimators = 1000
+)
+
+# Predictions
+cg_rct_stacked["pred_treatment_rf"] = rf_treatment.predict(cg_rct_stacked)["prediction"]
+cg_rct_stacked["pred_control_rf"] = rf_control.predict(cg_rct_stacked)["prediction"]
+
+cg_rct_stacked["uplift_score_rf"] = (
+    cg_rct_stacked.pred_treatment_rf - cg_rct_stacked.pred_control_rf
+)
+
+uplift_tab_rf = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+)
+
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+)
+```
+
+## Column
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+)
+```
+
+# Row
+
+## Column
+
+```{python}
+#| title: Gain curves - Propensity Model
+uplift_profit_rf = prof_calc(uplift_tab_rf, 14.99, 1.5)
+
+prop_tab_rf = rsm.uplift_tab(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_rf", "ad", 1, qnt = 20
+)
+
+fig = rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_rf", "uplift_score_rf"],
+    "ad",
+    1, qnt = 20
+)
+```
+
+## Column
+
+```{python}
+fig = rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_rf", "uplift_score_rf"],
+    "ad",
+    1, qnt = 20
+)
+```
