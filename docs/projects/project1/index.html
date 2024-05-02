@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Duyen Tran">
-<meta name="dcterms.date" content="2024-04-16">
+<meta name="dcterms.date" content="2024-05-02">
 
 <title>Website - A Replication of Karlan and List</title>
 <style>
@@ -168,6 +168,10 @@ window.Quarto = {
     <a class="nav-link" href="../../projects.html"> 
 <span class="menu-text">Projects</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../visualization.html"> 
+<span class="menu-text">Visualization</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
           <div class="quarto-navbar-tools">
@@ -240,7 +244,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">April 16, 2024</p>
+      <p class="date">May 2, 2024</p>
     </div>
   </div>
   
@@ -252,7 +256,7 @@ window.Quarto = {
 </header>
 
 
-<div id="a4f66b7d" class="cell" data-execution_count="1">
+<div id="cb0b6c08" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># import sys;</span></span>
@@ -497,7 +501,7 @@ Variable Definitions
 </div>
 </div>
 </div>
-<div id="0af50f84" class="cell" data-execution_count="3">
+<div id="ff975161" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display" data-execution_count="3">
 <div>
 <div>
@@ -803,7 +807,7 @@ Variable Definitions
 </div>
 </div>
 </div>
-<div id="1c363d47" class="cell" data-execution_count="4">
+<div id="673e2455" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
 RangeIndex: 50083 entries, 0 to 50082
@@ -880,7 +884,7 @@ memory usage: 8.9 MB</code></pre>
 t_{\text{value}} = \frac{\bar{x}_{\text{1}} - \bar{x}_{\text{2}}}{\sqrt{\frac{s_{\text{1}}^2}{n_{\text{1}}} + \frac{s_{\text{2}}^2}{n_{\text{2}}}}}
 \]</span></p>
 <p>I know there are serverals library that can automatically calculate the t values for us, but as structure, we will define the t_value using the formula in the class slides</p>
-<div id="5722f424" class="cell" data-execution_count="6">
+<div id="1c451f84" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> t_value(treatment, control):</span>
@@ -898,7 +902,7 @@ t_{\text{value}} = \frac{\bar{x}_{\text{1}} - \bar{x}_{\text{2}}}{\sqrt{\frac{s_
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> t_value</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="f1ce38bd" class="cell" data-execution_count="7">
+<div id="c79b6029" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>t_value_months <span class="op">=</span> t_value(months_treatment, months_control)</span>
@@ -913,7 +917,7 @@ t_{\text{value}} = \frac{\bar{x}_{\text{1}} - \bar{x}_{\text{2}}}{\sqrt{\frac{s_
 df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}})^2 + (n_1 - 1)(1 - \frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}})^2}
 \]</span></p>
 <p>Define a fuction to find degree of freedom</p>
-<div id="e9aed9ac" class="cell" data-execution_count="8">
+<div id="e242a787" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> dof(treatment, control):</span>
@@ -940,7 +944,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> degree_of_freedom</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="6201c307" class="cell" data-execution_count="9">
+<div id="197f54b7" class="cell" data-execution_count="9">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>dof_months <span class="op">=</span> dof(months_treatment, months_control)</span>
@@ -950,7 +954,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <pre><code>Degree of freedom is 33394.14</code></pre>
 </div>
 </div>
-<div id="bb8c6014" class="cell" data-execution_count="10">
+<div id="afecd08b" class="cell" data-execution_count="10">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find p-value</span></span>
@@ -966,7 +970,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 </section>
 <section id="linear-regression" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression"><strong>Linear Regression</strong></h4>
-<div id="5b550931" class="cell" data-execution_count="11">
+<div id="5cbb7f95" class="cell" data-execution_count="11">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -1031,7 +1035,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <h3 class="anchored" data-anchor-id="highest-previous-contribution">Highest previous contribution</h3>
 <p>Test the highest previous contribution to see if the treatment and control group are statistically different at 95% confidence level</p>
 <p><span class="math display">\[H_0: \mu_{contribution\;treatment} = \mu_{contribution\;control} \]</span> <span class="math display">\[H_a: \mu_{contribution\;treatment} \neq \mu_{contribution\;control}  \]</span></p>
-<div id="f6f0696c" class="cell" data-execution_count="12">
+<div id="2bd9140b" class="cell" data-execution_count="12">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>hpa_treatment <span class="op">=</span> data.loc[data[<span class="st">'treatment'</span>] <span class="op">==</span> <span class="dv">1</span>,<span class="st">'hpa'</span>]</span>
@@ -1045,7 +1049,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <pre><code>T_value is 0.9704</code></pre>
 </div>
 </div>
-<div id="09c7e7f5" class="cell" data-execution_count="13">
+<div id="85d9d9b5" class="cell" data-execution_count="13">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Apply the degree of freedom funcion that we defined above</span></span>
@@ -1056,7 +1060,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <pre><code>Degree of freedom is 35913.89</code></pre>
 </div>
 </div>
-<div id="dadce40b" class="cell" data-execution_count="14">
+<div id="e7b7115b" class="cell" data-execution_count="14">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find p-value</span></span>
@@ -1071,7 +1075,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <p>Given the high p-value (much greater than the alpha level of 0.05), we fail to reject the null hypothesis, which suggests that there is no statistically significant difference in the mean number of the highest previous contribution between the treatment and control groups.</p>
 <section id="linear-regression-1" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression-1">Linear Regression</h4>
-<div id="5d02e2e8" class="cell" data-execution_count="15">
+<div id="ed335c3d" class="cell" data-execution_count="15">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -1138,7 +1142,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <p><span class="math display">\[H_0: \mu_{percent\;treatment} = \mu_{percent\;control} \]</span> <span class="math display">\[H_a: \mu_{percent\;treatment} \neq \mu_{percent\;control}  \]</span></p>
 <section id="t-test-1" class="level4">
 <h4 class="anchored" data-anchor-id="t-test-1"><strong>T-test</strong></h4>
-<div id="7cc1db3c" class="cell" data-execution_count="16">
+<div id="a574ce94" class="cell" data-execution_count="16">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>dormant_treatment <span class="op">=</span> data.loc[data[<span class="st">'treatment'</span>] <span class="op">==</span> <span class="dv">1</span>,<span class="st">'dormant'</span>]</span>
@@ -1152,7 +1156,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <pre><code>T_value is 0.174</code></pre>
 </div>
 </div>
-<div id="323668b1" class="cell" data-execution_count="17">
+<div id="1c29af74" class="cell" data-execution_count="17">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Apply the degree of freedom funcion that we defined above</span></span>
@@ -1163,7 +1167,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <pre><code>Degree of freedom is 33362.05</code></pre>
 </div>
 </div>
-<div id="467a3ce3" class="cell" data-execution_count="18">
+<div id="782335dd" class="cell" data-execution_count="18">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find p-value</span></span>
@@ -1179,7 +1183,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 </section>
 <section id="linear-regression-2" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression-2"><strong>Linear Regression</strong></h4>
-<div id="2cde4e8d" class="cell" data-execution_count="19">
+<div id="07b8f82a" class="cell" data-execution_count="19">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -1245,7 +1249,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <p><span class="math display">\[H_0: \mu_{pwhite\;treatment} = \mu_{pwhite\;control} \]</span> <span class="math display">\[H_a: \mu_{pwhite\;treatment} \neq \mu_{pwhite\;control}  \]</span></p>
 <section id="t-test-2" class="level4">
 <h4 class="anchored" data-anchor-id="t-test-2"><strong>T-test</strong></h4>
-<div id="a6be13b4" class="cell" data-execution_count="20">
+<div id="4709ec44" class="cell" data-execution_count="20">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>pwhite_treatment <span class="op">=</span> data.loc[data[<span class="st">'treatment'</span>] <span class="op">==</span> <span class="dv">1</span>,<span class="st">'pwhite'</span>]</span>
@@ -1259,7 +1263,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <pre><code>T_value is -0.57</code></pre>
 </div>
 </div>
-<div id="ce42fe24" class="cell" data-execution_count="21">
+<div id="08bb62bd" class="cell" data-execution_count="21">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Apply the degree of freedom funcion that we defined above</span></span>
@@ -1270,7 +1274,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 <pre><code>Degree of freedom is 33185.24</code></pre>
 </div>
 </div>
-<div id="1c7f384f" class="cell" data-execution_count="22">
+<div id="0a22b5db" class="cell" data-execution_count="22">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find p-value</span></span>
@@ -1286,7 +1290,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 </section>
 <section id="linear-regression-3" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression-3"><strong>Linear Regression</strong></h4>
-<div id="142e92dd" class="cell" data-execution_count="23">
+<div id="63c03df0" class="cell" data-execution_count="23">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -1346,7 +1350,7 @@ df = \frac{(n_1 - 1)(n_2 - 1)}{(n_2 - 1)(\frac{\frac{s_1^2}{n_1}}{\frac{s_1^2}{n
 </ul>
 <p>These results are consistent with the independent t-test findings. The p-value in both analyses is much larger than the alpha level of 0.05, indicating no statistical significance. The t-statistic from the regression is the same as the t-statistic from the t-test, and the p-value confirms that there is no significant difference in the proportion of white people in the zipcode of treatment and control groups at the 95% confidence level.</p>
 <p><strong>Sidenote</strong>: I can’t replicate the results same as table 1 in the paper. Mean for pwhite is:</p>
-<div id="a49964e2" class="cell" data-execution_count="24">
+<div id="3fb9ff58" class="cell" data-execution_count="24">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>avg_white_treatment <span class="op">=</span> pwhite_treatment.mean()</span>
@@ -1370,7 +1374,7 @@ The avg pwhite of treatment group is 0.8199999928474426</code></pre>
 <h2 class="anchored" data-anchor-id="charitable-contribution-made">Charitable Contribution Made</h2>
 <section id="proportion-of-donation" class="level4">
 <h4 class="anchored" data-anchor-id="proportion-of-donation"><strong>Proportion of donation</strong></h4>
-<div id="fd5d6d31" class="cell" data-execution_count="25">
+<div id="8a3d7490" class="cell" data-execution_count="25">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>gave_treatment <span class="op">=</span> data[data[<span class="st">'treatment'</span>] <span class="op">==</span> <span class="dv">1</span>][<span class="st">'gave'</span>].mean()</span>
@@ -1402,7 +1406,7 @@ The avg pwhite of treatment group is 0.8199999928474426</code></pre>
 <section id="t-test-3" class="level4">
 <h4 class="anchored" data-anchor-id="t-test-3"><strong>T-test</strong></h4>
 <p>First of all, let’s check the similarity between our data and Panel A in table 2A</p>
-<div id="b143b90d" class="cell" data-execution_count="26">
+<div id="48b3a468" class="cell" data-execution_count="26">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>donated_treatment <span class="op">=</span> data[data[<span class="st">'treatment'</span>] <span class="op">==</span> <span class="dv">1</span>][<span class="st">'gave'</span>]</span>
@@ -1418,7 +1422,7 @@ The avg pwhite of treatment group is 0.8199999928474426</code></pre>
 The response rate of treatment group panel A is 0.018</code></pre>
 </div>
 </div>
-<div id="2a9c543d" class="cell" data-execution_count="27">
+<div id="8fb2bdec" class="cell" data-execution_count="27">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the t_values function that we defined above</span></span>
@@ -1429,7 +1433,7 @@ The response rate of treatment group panel A is 0.018</code></pre>
 <pre><code>T_value is 3.209</code></pre>
 </div>
 </div>
-<div id="1fe18f04" class="cell" data-execution_count="28">
+<div id="1fe877b5" class="cell" data-execution_count="28">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Apply the degree of freedom funcion that we defined above</span></span>
@@ -1440,7 +1444,7 @@ The response rate of treatment group panel A is 0.018</code></pre>
 <pre><code>Degree of freedom is 36576.84</code></pre>
 </div>
 </div>
-<div id="4a291ee6" class="cell" data-execution_count="29">
+<div id="3dbe038c" class="cell" data-execution_count="29">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find p-value</span></span>
@@ -1456,7 +1460,7 @@ The response rate of treatment group panel A is 0.018</code></pre>
 </section>
 <section id="linear-regression-4" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression-4"><strong>Linear Regression</strong></h4>
-<div id="bd1c4b23" class="cell" data-execution_count="30">
+<div id="e645b9e0" class="cell" data-execution_count="30">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -1521,7 +1525,7 @@ The response rate of treatment group panel A is 0.018</code></pre>
 </section>
 <section id="probit-regression" class="level4">
 <h4 class="anchored" data-anchor-id="probit-regression"><strong>Probit Regression</strong></h4>
-<div id="164862a0" class="cell" data-execution_count="31">
+<div id="5cf8f313" class="cell" data-execution_count="31">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>X_linear <span class="op">=</span> sm.add_constant(data[<span class="st">'treatment'</span>])  <span class="co"># Add a constant to the independent variable</span></span>
@@ -1561,7 +1565,7 @@ treatment      0.0868      0.028      3.113      0.002       0.032       0.141
 z = \frac{p_a - p_b}{\sqrt{\frac{p_a(1 - p_a)}{n_a} + \frac{p_b(1 - p_b)}{n_b}}}
 \]</span></p>
 <p>Same as the t_value function above, let’s define z_score function</p>
-<div id="8458b26a" class="cell" data-execution_count="32">
+<div id="7711c536" class="cell" data-execution_count="32">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> z_score(data1, data2, full_data):</span>
@@ -1576,7 +1580,7 @@ z = \frac{p_a - p_b}{\sqrt{\frac{p_a(1 - p_a)}{n_a} + \frac{p_b(1 - p_b)}{n_b}}}
 </details>
 </div>
 <p>Double check the similarity response rate to Table 2 Panel A</p>
-<div id="1d049800" class="cell" data-execution_count="33">
+<div id="9b186fc3" class="cell" data-execution_count="33">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>gave_ratio1 <span class="op">=</span> data[data[<span class="st">'ratio'</span>] <span class="op">==</span> <span class="dv">1</span>][<span class="st">'gave'</span>]</span>
@@ -1599,7 +1603,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 <p><span class="math display">\[H_0: p_{Control} = p_{1:1\;Ratio}\]</span> <span class="math display">\[H_a: p_{Control} \neq p_{1:1\;Ratio}\]</span></p>
 <section id="z-test" class="level4">
 <h4 class="anchored" data-anchor-id="z-test"><strong>Z-test</strong></h4>
-<div id="092dcfdf" class="cell" data-execution_count="34">
+<div id="eee8207c" class="cell" data-execution_count="34">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the function that we defined above</span></span>
@@ -1610,7 +1614,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 <pre><code>Z score is 1.705</code></pre>
 </div>
 </div>
-<div id="128e3285" class="cell" data-execution_count="35">
+<div id="67ee290c" class="cell" data-execution_count="35">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># find p value</span></span>
@@ -1630,7 +1634,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 <p><span class="math display">\[H_0: p_{Control} = p_{2:1\;Ratio}\]</span> <span class="math display">\[H_a: p_{Control} \neq p_{2:1\;Ratio}\]</span></p>
 <section id="z-test-1" class="level4">
 <h4 class="anchored" data-anchor-id="z-test-1"><strong>Z-test</strong></h4>
-<div id="7d83b219" class="cell" data-execution_count="36">
+<div id="499f0b21" class="cell" data-execution_count="36">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>z_score_ratio2 <span class="op">=</span> z_score(gave_ratio2, gave_control, data)</span>
@@ -1640,7 +1644,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 <pre><code>Z score is 2.7397</code></pre>
 </div>
 </div>
-<div id="8ab5421a" class="cell" data-execution_count="37">
+<div id="926caff6" class="cell" data-execution_count="37">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># find p value</span></span>
@@ -1660,7 +1664,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 <p><span class="math display">\[H_0: p_{Control} = p_{3:1\;Ratio}\]</span> <span class="math display">\[H_a: p_{Control} \neq p_{3:1\;Ratio}\]</span></p>
 <section id="z-test-2" class="level4">
 <h4 class="anchored" data-anchor-id="z-test-2"><strong>Z-test</strong></h4>
-<div id="685ae163" class="cell" data-execution_count="38">
+<div id="2111dfc5" class="cell" data-execution_count="38">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>z_score_ratio3 <span class="op">=</span> z_score(gave_ratio3, gave_control, data)</span>
@@ -1670,7 +1674,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 <pre><code>Z score is 2.793</code></pre>
 </div>
 </div>
-<div id="17858368" class="cell" data-execution_count="39">
+<div id="32f18139" class="cell" data-execution_count="39">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co"># find p value</span></span>
@@ -1693,7 +1697,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 <section id="regression-on-ratio1-ratio2-ratio3" class="level3">
 <h3 class="anchored" data-anchor-id="regression-on-ratio1-ratio2-ratio3">Regression on ratio1, ratio2, ratio3</h3>
 <p>First of all, create a new ratio1 variable</p>
-<div id="376740ce" class="cell" data-execution_count="40">
+<div id="07b8d762" class="cell" data-execution_count="40">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb62"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>data[<span class="st">'ratio1'</span>] <span class="op">=</span> rsm.ifelse(data.ratio <span class="op">==</span> <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1701,7 +1705,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 </div>
 <section id="linear-regression-5" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression-5"><strong>Linear regression</strong></h4>
-<div id="ce698089" class="cell" data-execution_count="41">
+<div id="80a19bbd" class="cell" data-execution_count="41">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -1798,7 +1802,7 @@ Response rate of 3:1 matching is 0.023</code></pre>
 </section>
 <section id="response-rate-difference" class="level4">
 <h4 class="anchored" data-anchor-id="response-rate-difference"><strong>Response rate difference</strong></h4>
-<div id="177e6468" class="cell" data-execution_count="42">
+<div id="58352a06" class="cell" data-execution_count="42">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>rr_1_1 <span class="op">=</span> data[data[<span class="st">'ratio1'</span>] <span class="op">==</span> <span class="dv">1</span>][<span class="st">'gave'</span>].mean()</span>
@@ -1817,7 +1821,7 @@ The response rate difference between the 2:1 and 3:1 match ratios 0.0</code></pr
 </div>
 </div>
 <p>Recall the linear regression result above:</p>
-<div id="c020c819" class="cell" data-execution_count="43">
+<div id="bd244521" class="cell" data-execution_count="43">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb66"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>lr.coef.<span class="bu">round</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1883,7 +1887,7 @@ The response rate difference between the 2:1 and 3:1 match ratios 0.0</code></pr
 </div>
 </div>
 </div>
-<div id="982c5e8a" class="cell" data-execution_count="44">
+<div id="8d7d4ec4" class="cell" data-execution_count="44">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>coef_ratio1 <span class="op">=</span> <span class="fl">0.003</span></span>
@@ -1910,7 +1914,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <section id="size-of-charitable-contribution" class="level2">
 <h2 class="anchored" data-anchor-id="size-of-charitable-contribution">Size of Charitable Contribution</h2>
 <p><span class="math display">\[H_0: \mu_{amount\;treatment} = \mu_{amount\;control} \]</span> <span class="math display">\[H_a: \mu_{amount\;treatment} \neq \mu_{amount\;control}  \]</span></p>
-<div id="633d6781" class="cell" data-execution_count="45">
+<div id="b77d79fc" class="cell" data-execution_count="45">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb69"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>amount_treatment <span class="op">=</span> data.loc[data[<span class="st">'treatment'</span>] <span class="op">==</span> <span class="dv">1</span>,<span class="st">'amount'</span>]</span>
@@ -1924,7 +1928,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <pre><code>T_value is 1.9182617883567805</code></pre>
 </div>
 </div>
-<div id="f939e12a" class="cell" data-execution_count="46">
+<div id="0572abd2" class="cell" data-execution_count="46">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb71"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Apply the degree of freedom funcion that we defined above</span></span>
@@ -1935,7 +1939,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <pre><code>Degree of freedom is 36216.06015374612</code></pre>
 </div>
 </div>
-<div id="bdf339a4" class="cell" data-execution_count="47">
+<div id="433ba010" class="cell" data-execution_count="47">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb73"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find p-value</span></span>
@@ -1949,7 +1953,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <p>The t-test results show a t-statistic of approximately 1.918 with a p-value of 0.055. This p-value is slightly above the conventional threshold of 0.05, indicating that the difference in average donation amounts between the treatment and control groups is not statistically significant at the 5% level. However, the p-value is close to the threshold, suggesting a potential trend where the treatment group might have higher donation amounts than the control group, though this difference isn’t strong enough to be considered statistically significant.</p>
 <section id="linear-regression-6" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression-6"><strong>Linear Regression</strong></h4>
-<div id="7401416a" class="cell" data-execution_count="48">
+<div id="3677954b" class="cell" data-execution_count="48">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb75"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -2013,7 +2017,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 </section>
 <section id="limit-only-those-who-made-a-donation" class="level3">
 <h3 class="anchored" data-anchor-id="limit-only-those-who-made-a-donation">Limit only those who made a donation:</h3>
-<div id="669c735f" class="cell" data-execution_count="49">
+<div id="1b9df5b0" class="cell" data-execution_count="49">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb76"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>data_donated <span class="op">=</span> data[data[<span class="st">'amount'</span>] <span class="op">&gt;</span> <span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -2021,7 +2025,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 </div>
 <section id="t-test-4" class="level4">
 <h4 class="anchored" data-anchor-id="t-test-4"><strong>T-Test</strong></h4>
-<div id="56bc2284" class="cell" data-execution_count="50">
+<div id="83234d3b" class="cell" data-execution_count="50">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb77"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>donated_treatment <span class="op">=</span> data_donated.loc[data_donated[<span class="st">'treatment'</span>] <span class="op">==</span> <span class="dv">1</span>,<span class="st">'amount'</span>]</span>
@@ -2035,7 +2039,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <pre><code>T_value is -0.5846089783693985</code></pre>
 </div>
 </div>
-<div id="34a9a524" class="cell" data-execution_count="51">
+<div id="33fd5313" class="cell" data-execution_count="51">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb79"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Apply the degree of freedom funcion that we defined above</span></span>
@@ -2046,7 +2050,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <pre><code>Degree of freedom is 557.4599283248195</code></pre>
 </div>
 </div>
-<div id="3c9f97ca" class="cell" data-execution_count="52">
+<div id="72513b8d" class="cell" data-execution_count="52">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb81"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find p-value</span></span>
@@ -2062,7 +2066,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 </section>
 <section id="linear-regression-7" class="level4">
 <h4 class="anchored" data-anchor-id="linear-regression-7"><strong>Linear Regression</strong></h4>
-<div id="1c258808" class="cell" data-execution_count="53">
+<div id="3c4c82fe" class="cell" data-execution_count="53">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb83"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> rsm.model.regress(</span>
@@ -2125,7 +2129,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 </section>
 <section id="plots" class="level4">
 <h4 class="anchored" data-anchor-id="plots"><strong>Plots</strong></h4>
-<div id="54c075d8" class="cell" data-execution_count="54">
+<div id="c019af09" class="cell" data-execution_count="54">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb84"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prepare the plots for treatment and control groups who made donations</span></span>
@@ -2178,7 +2182,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <h2 class="anchored" data-anchor-id="simulation-experiment">Simulation Experiment</h2>
 <section id="law-of-large-numbers" class="level3">
 <h3 class="anchored" data-anchor-id="law-of-large-numbers">Law of Large Numbers</h3>
-<div id="06e34a3d" class="cell" data-execution_count="55">
+<div id="fe457426" class="cell" data-execution_count="55">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb85"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define probabilities for Bernoulli distributions</span></span>
@@ -2227,7 +2231,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 </section>
 <section id="central-limit-theorem" class="level3">
 <h3 class="anchored" data-anchor-id="central-limit-theorem">Central Limit Theorem</h3>
-<div id="3020f880" class="cell" data-execution_count="56">
+<div id="9d6a7652" class="cell" data-execution_count="56">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb86"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define sample sizes to simulate</span></span>
@@ -2278,7 +2282,7 @@ The response rate difference between the 2:1 and 3:1 match ratios from regressio
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/cell-57-output-1.png" width="1908" height="470" class="figure-img"></p>
+<p><img src="index_files/figure-html/cell-57-output-1.png" width="1910" height="470" class="figure-img"></p>
 </figure>
 </div>
 </div>

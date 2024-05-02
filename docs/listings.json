@@ -2,8 +2,15 @@
   {
     "listing": "/projects.html",
     "items": [
-      "/projects/project2/index.html",
-      "/projects/project1/index.html"
+      "/projects/project1/index.html",
+      "/projects/project2/index.html"
+    ]
+  },
+  {
+    "listing": "/visualization.html",
+    "items": [
+      "/visualization/A:Btesting/index.html",
+      "/visualization/Possion/index.html"
     ]
   }
 ]
