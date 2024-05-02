@@ -1,0 +1,155 @@
+---
+title: AB testing
+format: 
+    dashboard:
+        orientation: rows
+---
+
+```{python}
+import pandas as pd
+import pyrsm as rsm
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+```
+
+
+## Row
+
+This is a replication project doing A/B testing
+
+## Row
+```{python}
+data = pd.read_stata("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/project1/karlan_list_2007.dta")
+
+# Prepare the plots for treatment and control groups who made donations
+data_donated = data[data['amount'] > 0]
+
+donated_treatment = data_donated.loc[data_donated['treatment'] == 1,'amount']
+donated_control = data_donated.loc[data_donated['treatment'] == 0,'amount']
+
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(14, 6))
+
+# Plot for Treatment Group
+_ =axes[0].hist(donated_treatment, bins=30, color='blue', alpha=0.7)
+axes[0].axvline(donated_treatment.mean(), color='red', linestyle='dashed', linewidth=1)
+_ =axes[0].set_title('Treatment Group Donation Amounts')
+_ =axes[0].set_xlabel('Donation Amount')
+_ =axes[0].set_ylabel('Frequency')
+_ =axes[0].text(donated_treatment.mean(), max(axes[0].get_ylim()) * 0.5, f'Average: {donated_treatment.mean():.2f}', color='red')
+
+# Plot for Control Group
+_ =axes[1].hist(donated_control, bins=30, color='green', alpha=0.7)
+_ =axes[1].axvline(donated_control.mean(), color='red', linestyle='dashed', linewidth=1)
+_ =axes[1].set_title('Control Group Donation Amounts')
+_ =axes[1].set_xlabel('Donation Amount')
+_ =axes[1].set_ylabel('Frequency')
+_ =axes[1].text(donated_control.mean(), max(axes[1].get_ylim()) * 0.5, f'Average: {donated_control.mean():.2f}', color='red')
+
+plt.tight_layout()
+plt.show()
+```
+
+## Row
+
+### Column
+
+```{python}
+
+gave_treatment = data[data['treatment'] == 1]['gave'].mean()
+gave_control = data[data['treatment'] == 0]['gave'].mean()
+
+proportions = [gave_treatment, gave_control]
+group_labels = ['Treatment', 'Control']
+
+# Create the bar plot
+plt.bar(group_labels, proportions, color=['blue', 'orange'])
+
+# Add labels and title
+_ =plt.ylabel('Proportion who donated', fontsize = 15)
+_ =plt.title('Proportion of Donations by Group', fontsize = 15)
+
+# Show the plot
+plt.show()
+```
+
+### Column
+```{python}
+# Define probabilities for Bernoulli distributions
+p_control = 0.018  # Probability for control group
+p_treatment = 0.022  # Probability for treatment group
+
+# Simulate 100,000 draws for the control group
+control_samples = np.random.binomial(1, p_control, 100000)
+
+# Simulate 10,000 draws for the treatment group
+treatment_samples = np.random.binomial(1, p_treatment, 10000)
+
+# Calculate differences for each of the first 10,000 elements in the control sample (to match treatment sample size)
+differences = treatment_samples - control_samples[:10000]
+
+# Calculate cumulative averages of differences
+cumulative_averages = np.cumsum(differences) / (np.arange(10000) + 1)
+
+# Plot the cumulative averages of the differences
+plt.figure(figsize=(10, 6))
+plt.plot(cumulative_averages, label='Cumulative Average of Differences', color='blue')
+plt.axhline(y=(p_treatment - p_control), color='red', linestyle='dashed', label='True Difference (0.022 - 0.018)')
+_ =plt.xlabel('Number of Simulations', fontsize = 15)
+_ =plt.ylabel('Cumulative Average of Difference', fontsize = 15)
+_ =plt.title('Cumulative Average of Differences Between Treatment and Control (Simulation)', fontsize = 15)
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+## Row
+```{python}
+#| title: Central Limit Theorem
+# Define sample sizes to simulate
+sample_sizes = [50, 200, 500, 1000]
+
+fig, axes = plt.subplots(nrows=1, ncols=4, figsize=(20, 5), sharey=True)
+
+# Simulate the process and plot the histograms
+for i, sample_size in enumerate(sample_sizes):
+    # Simulate drawing samples and calculating the means 1000 times
+    sample_means = np.array([np.mean(np.random.binomial(1, p_treatment, sample_size) - 
+                                     np.random.binomial(1, p_control, sample_size)) 
+                             for _ in range(1000)])
+    
+    # Plot the histogram
+    _ =axes[i].hist(sample_means, bins=30, orientation='horizontal', color='blue', alpha=0.6, edgecolor='black')
+    
+    # Calculate the mean and standard deviation for the normal distribution curve
+    mean_of_sample_means = np.mean(sample_means)
+    std_dev_of_sample_means = np.std(sample_means)
+
+    # Generate values for the normal distribution curve
+    curve_x = np.linspace(mean_of_sample_means - 3 * std_dev_of_sample_means, 
+                          mean_of_sample_means + 3 * std_dev_of_sample_means, 100)
+    curve_y = (1 / (std_dev_of_sample_means * np.sqrt(2 * np.pi)) *
+               np.exp(-(curve_x - mean_of_sample_means) ** 2 / (2 * std_dev_of_sample_means ** 2)))
+    
+    # Scale the curve y to match the histogram scale
+    curve_y_scaled = curve_y * max(np.histogram(sample_means, bins=30)[0]) / max(curve_y)
+    
+    # Draw the normal distribution curve as a red line
+    _ =axes[i].plot(curve_y_scaled, curve_x, '-')
+
+    # Add a red dashed line at the true difference
+    _ =axes[i].axhline(y=0.004, color='red', linestyle='dashed', linewidth=2)
+
+    # Set titles and labels
+    _ =axes[i].set_title(f'Sample Size {sample_size}', fontsize = 15)
+    _ =axes[i].set_xlabel('Frequency' if i == len(sample_sizes) - 1 else '', fontsize = 15)  # Only add xlabel to the last subplot
+    _ =axes[i].set_ylabel('Average Difference' if i == 0 else '', fontsize = 15)  # Only add ylabel to the first subplot
+
+# Adjust layout for better fit
+plt.tight_layout()
+
+# Show the plot
+plt.show()
+```
+
+

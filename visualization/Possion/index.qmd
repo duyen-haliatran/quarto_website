@@ -1,0 +1,219 @@
+---
+title: Poisson Regression Model
+format: 
+    dashboard:
+        orientation: rows
+---
+
+```{python}
+import pandas as pd
+import pyrsm as rsm
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+```
+
+## Column {.tabset}
+
+### Tab 1
+
+#### Row
+
+Airbnb Case Study
+
+##### Column
+
+```{python}
+
+airbnb = pd.read_csv('/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/project2/airbnb.csv')
+
+airbnb = airbnb.drop('Unnamed: 0', axis=1)
+airbnb['bathrooms'].fillna(airbnb['bathrooms'].median(), inplace=True)
+airbnb['bedrooms'].fillna(airbnb['bedrooms'].median(), inplace=True)
+airbnb['cleanliness_missing'] = airbnb['review_scores_cleanliness'].isnull().astype(int)
+airbnb['location_missing'] = airbnb['review_scores_location'].isnull().astype(int)
+airbnb['value_missing'] = airbnb['review_scores_value'].isnull().astype(int)
+
+# Impute missing review scores with the median
+airbnb['review_scores_cleanliness'].fillna(airbnb['review_scores_cleanliness'].median(), inplace=True)
+airbnb['review_scores_location'].fillna(airbnb['review_scores_location'].median(), inplace=True)
+airbnb['review_scores_value'].fillna(airbnb['review_scores_value'].median(), inplace=True)
+
+# Setting up the visualization style
+sns.set(style="whitegrid")
+
+# Plotting the distribution of number of reviews
+plt.figure(figsize=(8, 4))
+sns.histplot(airbnb['number_of_reviews'], bins=50, kde=True)
+_ =plt.title('Distribution of Number of Reviews')
+_ =plt.xlabel('Number of Reviews')
+_ =plt.ylabel('Frequency')
+plt.show()
+```
+
+```{python}
+# Calculate the 80th percentile
+percentile_80 = airbnb['number_of_reviews'].quantile(0.8)
+
+# Plotting the distribution of number of reviews limited to the 80th percentile
+plt.figure(figsize=(8, 4))
+sns.histplot(airbnb['number_of_reviews'], bins=50, kde=True, binrange=(0, percentile_80))
+_ =plt.title('Distribution of Number of Reviews (80% of Data)')
+_ =plt.xlabel('Number of Reviews')
+_ =plt.ylabel('Frequency')
+plt.xlim(0, percentile_80)
+plt.show()
+```
+
+##### Column
+
+```{python}
+# Visualization of number of reviews by room type
+plt.figure(figsize=(8, 4))
+sns.boxplot(x='room_type', y='number_of_reviews', data=airbnb)
+_ =plt.title('Number of Reviews by Room Type')
+_ =plt.xlabel('Room Type')
+_ =plt.ylabel('Number of Reviews')
+plt.show()
+
+```
+
+```{python}
+
+# Scatter plot for number of reviews vs. price
+plt.figure(figsize=(8, 4))
+sns.scatterplot(x='price', y='number_of_reviews', data=airbnb)
+_ =plt.title('Number of Reviews vs. Price')
+_ =plt.xlabel('Price')
+_ =plt.ylabel('Number of Reviews')
+plt.xscale('log')  # Using logarithmic scale due to wide range of prices
+plt.show()
+
+```
+
+##### Column
+```{python}
+
+# Scatter plots for number of reviews vs. review scores
+fig, axes = plt.subplots(1, 3, figsize=(8, 4))
+score_vars = ['review_scores_cleanliness', 'review_scores_location', 'review_scores_value']
+titles = ['Cleanliness', 'Location', 'Value']
+
+for ax, var, title in zip(axes, score_vars, titles):
+    sns.scatterplot(ax=ax, x=airbnb[var], y=airbnb['number_of_reviews'])
+    _ =ax.set_title(f'Number of Reviews vs. {title}')
+    _ =ax.set_xlabel(title)
+    _ =ax.set_ylabel('Number of Reviews')
+
+plt.tight_layout()
+plt.show()
+
+```
+
+
+### Tab 2
+
+#### Row
+
+Blueprinty Case Study 
+
+#### Row
+##### Column
+
+```{python}
+
+data = pd.read_csv('/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/project2/blueprinty.csv')
+data = data.drop('Unnamed: 0', axis=1)
+
+```
+
+```{python}
+#| title: Compare patents distribution of customer and non customer
+
+# Set up the figure with two subplots for better comparison
+fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+
+# Plot histogram for non-customers
+sns.histplot(data[data['iscustomer'] == 0]['patents'], ax=axes[0], color='blue', bins=30, kde=True)
+_ = axes[0].set_title('Patent Distribution for Non-Customers')
+_ = axes[0].set_xlabel('Number of Patents')
+_ = axes[0].set_ylabel('Frequency')
+
+# Plot histogram for customers
+sns.histplot(data[data['iscustomer'] == 1]['patents'], ax=axes[1], color='orange', bins=30, kde=True)
+_ = axes[1].set_title('Patent Distribution for Customers')
+_ = axes[1].set_xlabel('Number of Patents')
+_ = axes[1].set_ylabel('Frequency')
+
+# Display the plots
+plt.tight_layout()
+plt.show()
+```
+
+
+#### Row
+
+###### Column
+
+```{python}
+#| title: Distribution across regions by customer status
+
+plt.figure(figsize=(10, 5))
+
+# Boxplot to show age distribution
+sns.boxplot(x='region', y='age', hue='iscustomer', data=data, palette=['blue', 'orange'])
+
+# Adjust plot labels and title
+_ = plt.title('Age Distribution by Region and Customer Status')
+_ = plt.xlabel('Region')
+_ = plt.ylabel('Age')
+plt.legend(title='Is Customer', labels=['Not Customer', 'Customer'])
+
+# Show the plot
+plt.show()
+
+```
+
+
+#### Row
+
+##### Column
+
+```{python}
+#| title: Likelihood of Poison Model
+import warnings 
+warnings.filterwarnings("ignore") 
+
+def poisson_likelihood(lam, Y):
+    n = len(Y)
+    sum_Y = np.sum(Y)
+    likelihood = np.exp(-n * lam) * (lam ** sum_Y) / np.prod([np.math.factorial(y) for y in Y])
+    return likelihood
+
+def poisson_log_likelihood(lam, Y):
+    n = len(Y)
+    sum_Y = np.sum(Y)
+    log_likelihood = -n * lam + np.log(lam) * sum_Y - np.sum([np.log(np.math.factorial(y)) for y in Y])
+    return log_likelihood
+
+Y = data['patents']
+
+# Define the range for lambda values
+lambda_range = np.linspace(0.01, 10, 1000)  # Start from 0.01 to avoid log(0)
+
+# Calculate the log-likelihood for each lambda in the range
+log_likelihood_values = [poisson_log_likelihood(lam, Y) for lam in lambda_range]
+
+# Plot the results
+plt.figure(figsize=(8, 3))
+plt.plot(lambda_range, log_likelihood_values, label='Log-Likelihood')
+_ =plt.xlabel('Lambda (λ)')
+_ =plt.ylabel('Log-Likelihood')
+_ =plt.title('Log-Likelihood of Observed Patent Counts Across Lambda Values')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+```
+
+
