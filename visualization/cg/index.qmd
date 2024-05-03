@@ -110,7 +110,7 @@ fig = rsm.uplift_plot(
 )
 ```
 
-
+### Row
 #### Column
 
 ```{python}
@@ -153,7 +153,7 @@ fig = rsm.uplift_plot(
 
 ```
 
-
+### Row
 #### Column
 
 ```{python}
@@ -236,7 +236,7 @@ fig = rsm.uplift_plot(
 ```
 
 
-
+### Row
 #### Column
 
 ```{python}
@@ -252,7 +252,7 @@ fig = rsm.uplift_plot(
     cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_nn", "ad", 1, qnt = 20
 )
 ```
-
+### Row
 #### Column
 
 ```{python}
@@ -336,6 +336,7 @@ fig = rsm.uplift_plot(
 )
 ```
 
+### Row
 #### Column
 ```{python}
 fig = rsm.inc_uplift_plot(
@@ -350,6 +351,7 @@ fig = rsm.uplift_plot(
 )
 ```
 
+### Row
 #### Column
 
 ```{python}

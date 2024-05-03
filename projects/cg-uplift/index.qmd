@@ -737,6 +737,8 @@ difference_rf
 #### Using XGBoost Model
 
 ```{python}
+import warnings 
+warnings.filterwarnings("ignore") 
 import xgboost as xgb
 # Create X_train, X_test, y_train, y_test for treatment group
 X_train_treatment = cg_rct_stacked.loc[(cg_rct_stacked["training"] == 1) & (cg_rct_stacked["ad"] == 1), evar]
@@ -747,6 +749,9 @@ y_test_treatment = cg_rct_stacked.query("training == 0 & ad == 1").converted_yes
 ```
 
 ```{python}
+import warnings 
+warnings.filterwarnings("ignore") 
+
 # Setup model
 xgbc_treatment = xgb.XGBClassifier(use_label_encoder=False, eval_metric="logloss", enable_categorical=True)
 xgbc_treatment.fit(X_train_treatment, y_train_treatment)
@@ -779,6 +784,8 @@ y_test_control = cg_rct_stacked.query("training == 0 & ad == 0").converted_yes
 ```
 
 ```{python}
+import warnings 
+warnings.filterwarnings("ignore") 
 # Use the same param_grid as the treatment group
 xgbc_control = xgb.XGBClassifier(use_label_encoder=False, eval_metric="logloss", enable_categorical=True)
 
