@@ -13,14 +13,16 @@ format:
 
 Uplift and Propensity using Logistic Regression
 
+
 #### Column
 
+
 ```{python}
-#| title: Gains curves of Uplift Model
 import pandas as pd
 import numpy as np
 import pyrsm as rsm
 from sklearn.model_selection import GridSearchCV
+import matplotlib.pyplot as plt
 
 cg_organic_control = pd.read_parquet("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/cg/cg_organic_control.parquet").reset_index(drop=True)
 
@@ -98,87 +100,80 @@ uplift_tab = rsm.uplift_tab(
     cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
 )
 
-fig = rsm.inc_uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20, ax = ax
 )
+_ =ax.set_title("Gains curves of Uplift Model", fontsize = 18)
+plt.show()
 ```
 
 ```{python}
-#| title: Gains plot of Uplift Model
-fig = rsm.uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))  # Adjust the figure size here
+rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20, ax=ax
 )
+_ =ax.set_title('Gains plot of Uplift Model', fontsize = 18)
+plt.show()
+
+# fig = rsm.uplift_plot(
+#     cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score", "ad", 1, qnt = 20
+# )
 ```
 
-### Row
 #### Column
 
+
 ```{python}
-#| title: Gains curves of Propensity Model
-price = 14.99
-cost = 1.5
-
-target_row = uplift_tab[uplift_tab['cum_prop'] <= 0.25].iloc[-1]
-
-# Define the function to calculate the profit
-def prof_calc(data, price = 14.99, cost = 1.5):
-    # Given variables
-    target_customers = 30000
-    target_prop = 30000 / 120000
-
-    # Calculate the scale factor
-    scale_factor = 120000 / 9000
-
-    # Calculate the expected incremental customers and profits
-    target_row = data[data['cum_prop'] <= target_prop].iloc[-1]
-    profit = (price*target_row['incremental_resp'] - cost * target_row['T_n']) * scale_factor
-    return profit
-
-uplift_profit_logit = prof_calc(uplift_tab, 14.99, 1.5)
-uplift_profit_logit
-
 propensity_tab = rsm.uplift_tab(
     cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
 
-fig = rsm.inc_uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment", "ad", 1, qnt = 20, ax = ax)
+_=ax.set_title("Gains curves of Propensity Model", fontsize = 18)
+plt.show()
 ```
 
-
 ```{python}
-#| title: Gains plot of Propensity Model
+
+fig, ax = plt.subplots(figsize=(10, 6))
 fig = rsm.uplift_plot(
     cg_rct_stacked.query("training == 0"), 
-    "converted", "yes", "pred_treatment", "ad", 1, qnt = 20)
+    "converted", "yes", "pred_treatment", "ad", 1, qnt = 20, ax = ax)
+_ = ax.set_title("Gains plot of Propensity Model", fontsize = 18)
 
 ```
 
-### Row
-#### Column
+#### Column 
 
 ```{python}
-#| title: Compare Gain Curves Uplift model and Propensity model
-fig = rsm.inc_uplift_plot(
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
     cg_rct_stacked.query("training == 0"),
     "converted",
     "yes",
     ["pred_treatment", "uplift_score"],
     "ad",
-    1, qnt = 20
+    1, qnt = 20, ax = ax
 )
+_ = ax.set_title("Compare Gain Curves Uplift model and Propensity model", fontsize = 18)
+plt.show()
 ```
 
 
 ```{python}
-#| title: Compare Gain plot Uplift model and Propensity model
-fig = rsm.uplift_plot(
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.uplift_plot(
     cg_rct_stacked.query("training == 0"),
     "converted",
     "yes",
     ["pred_treatment", "uplift_score"],
     "ad",
-    1, qnt = 20
+    1, qnt = 20, ax = ax
 )
+_ = ax.set_title("Compare Gain Plot Uplift model and Propensity model", fontsize = 18)
+plt.show()
 ```
 
 # Column {.tabset}
@@ -192,8 +187,6 @@ Neural Network Model
 #### Column
 
 ```{python}
-#| title: Gain plot - Uplift Model
-
 clf_treatment = rsm.model.mlp(
     data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
     rvar = 'converted',
@@ -219,46 +212,72 @@ cg_rct_stacked["uplift_score_nn"] = (
     cg_rct_stacked.pred_treatment_nn - cg_rct_stacked.pred_control_nn
 )
 
-uplift_tab_nn = rsm.uplift_tab(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20, ax = ax
 )
-
-fig = rsm.inc_uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
-)
+_ = ax.set_title("Gain curves - Uplift plot", fontsize = 18)
+plt.show()
 ```
 
 ```{python}
-#| title: Gain plot - Uplift plot
-fig = rsm.uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_nn", "ad", 1, qnt = 20, ax = ax
 )
+_ = ax.set_title("Gain Plot - Uplift plot", fontsize = 18)
+plt.show()
 ```
 
 
-### Row
+
 #### Column
 
 ```{python}
-#| title: Gain curves - Propensity Model
-fig = rsm.inc_uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_nn", "ad", 1, qnt = 20
+
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_nn", "ad", 1, qnt = 20, ax = ax
 )
+_ =ax.set_title('Gain curves - Propensity Model', fontsize = 18)
+
+plt.show()
 ```
 
 ```{python}
-#| title: Gain plot - Propensity Model
-fig = rsm.uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_nn", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_nn", "ad", 1, qnt = 20, ax = ax
 )
+_ =ax.set_title('Gain plot - Propensity Model', fontsize = 18)
+
+plt.show()
 ```
-### Row
+
+
 #### Column
 
 ```{python}
-#| title: Gain curves - Comparision Uplift and Propensity Model
 
-fig = rsm.uplift_plot(
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"),
+    "converted",
+    "yes",
+    ["pred_treatment_nn", "uplift_score_nn"],
+    "ad",
+    1, qnt = 20, ax = ax
+)
+_ =ax.set_title('Gain curves - Comparision Uplift and Propensity Model', fontsize = 18)
+
+plt.show()
+```
+
+
+```{python}
+
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.uplift_plot(
     cg_rct_stacked.query("training == 0"),
     "converted",
     "yes",
@@ -266,19 +285,9 @@ fig = rsm.uplift_plot(
     "ad",
     1, qnt = 20
 )
-```
+_ =ax.set_title('Gain plot - Comparision Uplift and Propensity Model', fontsize = 18)
 
-
-```{python}
-#| title: Gain plot - Comparision Uplift and Propensity Model
-fig = rsm.uplift_plot(
-    cg_rct_stacked.query("training == 0"),
-    "converted",
-    "yes",
-    ["pred_treatment_nn", "uplift_score_nn"],
-    "ad",
-    1, qnt = 20
-)
+plt.show()
 ```
 
 # Column {.tabset}
@@ -289,10 +298,10 @@ fig = rsm.uplift_plot(
 
 Random Forest Model
 
+
 #### Column
 
 ```{python}
-#| title: Gain curves - Uplift Model
 
 rf_treatment = rsm.model.rforest(
     data = {'cg_rct_stacked': cg_rct_stacked.query("training == 1 & ad == 1")},
@@ -320,66 +329,78 @@ cg_rct_stacked["uplift_score_rf"] = (
     cg_rct_stacked.pred_treatment_rf - cg_rct_stacked.pred_control_rf
 )
 
-uplift_tab_rf = rsm.uplift_tab(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20, ax = ax
 )
+_ =ax.set_title('Gain Curves - Uplift Model', fontsize = 18)
 
-fig = rsm.inc_uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
-)
+plt.show()
 ```
+
 
 ```{python}
-#| title: Gain Plot - Uplift Model
-fig = rsm.uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "uplift_score_rf", "ad", 1, qnt = 20, ax = ax
 )
+_ =ax.set_title('Gain Plot - Uplift Model', fontsize = 18)
+
+plt.show()
 ```
 
-### Row
-#### Column
-```{python}
-fig = rsm.inc_uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_rf", "ad", 1, qnt = 20
-)
-```
 
-```{python}
-#| title: Gain Plot - Uplift Model
-fig = rsm.uplift_plot(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_rf", "ad", 1, qnt = 20
-)
-```
-
-### Row
 #### Column
 
 ```{python}
-#| title: Gain curves - Comparision Uplift and Propensity Model
-uplift_profit_rf = prof_calc(uplift_tab_rf, 14.99, 1.5)
-
-prop_tab_rf = rsm.uplift_tab(
-    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_rf", "ad", 1, qnt = 20
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_rf", "ad", 1, qnt = 20, ax = ax
 )
+_ =ax.set_title('Gain Curves - Propensity Model', fontsize = 18)
 
-fig = rsm.inc_uplift_plot(
+plt.show()
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.uplift_plot(
+    cg_rct_stacked.query("training == 0"), "converted", "yes", "pred_treatment_rf", "ad", 1, qnt = 20, ax = ax
+)
+_ =ax.set_title('Gain Plot - Propensity Model', fontsize = 18)
+
+plt.show()
+
+```
+
+
+#### Column
+
+```{python}
+fig, ax = plt.subplots(figsize=(10, 6))
+rsm.inc_uplift_plot(
     cg_rct_stacked.query("training == 0"),
     "converted",
     "yes",
     ["pred_treatment_rf", "uplift_score_rf"],
     "ad",
-    1, qnt = 20
+    1, qnt = 20, ax = ax
 )
+_ =ax.set_title('Gain curves - Comparision Uplift and Propensity Model', fontsize = 18)
+
+plt.show()
 ```
 
 ```{python}
-#| title: Gain plot - Comparision Uplift and Propensity Model
+fig, ax = plt.subplots(figsize=(10, 6))
 fig = rsm.uplift_plot(
     cg_rct_stacked.query("training == 0"),
     "converted",
     "yes",
     ["pred_treatment_rf", "uplift_score_rf"],
     "ad",
-    1, qnt = 20
+    1, qnt = 20, ax = ax
 )
+_ =ax.set_title('Gain plot - Comparision Uplift and Propensity Model', fontsize = 18)
+plt.show()
 ```
