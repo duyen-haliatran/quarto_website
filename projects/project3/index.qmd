@@ -105,7 +105,7 @@ The "hard part" of the MNL likelihood function is organizing the data, as we nee
 
 What we would like to do is reorganize the data from a "wide" shape with $n$ rows and multiple columns for each covariate, to a "long" shape with $n \times J$ rows and a single column for each covariate.  As part of this re-organization, we'll add binary variables to indicate the first 3 products; the variables for featured and price are included in the dataset and simply need to be "pivoted" or "melted" from wide to long.  
 
-**Reshape and prep the data**
+##### **Reshape and prep the data**
 
 ```{python}
 # Melt the data into a long format
@@ -132,7 +132,7 @@ reshaped_yogurt
 
 ### Estimation
 
-**Code up the log-likelihood function.**
+##### **Code up the log-likelihood function.**
 
 ```{python}
 def log_likelihood(beta, X, choices):
@@ -141,71 +141,18 @@ def log_likelihood(beta, X, choices):
     # Exponentiated utilities
     exp_util = np.exp(utility)
     # Sum of exponentiated utilities across choices
-    sum_exp_util = np.sum(exp_util.reshape(-1, 4), axis=0)
+    sum_exp_util = np.sum(exp_util.reshape(-1, 4), axis=1)
     # Compute choice probabilities
     probabilities = exp_util / np.repeat(sum_exp_util, 4)
     # Log of probabilities of chosen alternatives
     log_likelihood = np.log(probabilities) * choices
 
     return np.sum(log_likelihood)
-# Define initial guesses for the parameters
-initial_beta = np.zeros(len(features))
-
-# Rerun the optimization with numpy properly imported and initial_beta defined
-result = minimize(negative_log_likelihood, initial_beta, args=(X, choices))
-
-# Print the results
 
 ```
-
-```{python}
-# Ensure choices are within the bounds of the number of alternatives
-assert np.all(choices >= 0) and np.all(choices < X.shape[1])
-
-# Define the negative log-likelihood function for MNL
-def negative_log_likelihood(beta, X, choices):
-    log_likelihood = 0
-    for i in range(len(choices)):
-        # Calculate the linear predictor for each alternative
-        linear_predictor = np.dot(X[i], beta)
-        
-        # Calculate the exponential of the linear predictor for all alternatives
-        exp_linear_predictor = np.exp(linear_predictor)
-        
-        # Compute the probability for each alternative
-        probability = exp_linear_predictor / np.sum(exp_linear_predictor)
-        
-        # Debugging statements
-        print(f"Iteration {i}")
-        print(f"Choices: {choices}")
-        print(f"Probability: {probability}")
-        
-        # Compute the log-likelihood for the chosen alternative
-        log_likelihood += np.log(probability[choices[i]])
-    
-    return -log_likelihood
-
-features = ['Yogurt1', 'Yogurt2', 'Yogurt3', 'f', 'p']
-X = reshaped_yogurt[features].values
-choices = reshaped_yogurt['y'].values
-
-X = np.array(X)
-choices = np.array(choices)
-
-# Define initial guesses for the parameters
-initial_beta = np.zeros(len(features))
-
-# Rerun the optimization with numpy properly imported and initial_beta defined
-result = minimize(negative_log_likelihood, initial_beta, args=(X, choices))
-
-# Print the results
-result.x
-
-```
-
-
 
 **Use `optimize()` in Python to find the MLEs for the 5 parameters ($\beta_1, \beta_2, \beta_3, \beta_f, \beta_p$).**
+
 ```{python}
 def negative_log_likelihood(beta, X, choices):
     # Utility calculation
@@ -213,57 +160,57 @@ def negative_log_likelihood(beta, X, choices):
     # Exponentiated utilities
     exp_util = np.exp(utility)
     # Sum of exponentiated utilities across choices
-    sum_exp_util = np.sum(exp_util.reshape(-1, 4), axis=0)
+    sum_exp_util = np.sum(exp_util.reshape(-1, 4), axis=1)
     # Compute choice probabilities
     probabilities = exp_util / np.repeat(sum_exp_util, 4)
     # Log of probabilities of chosen alternatives
     log_likelihood = np.log(probabilities) * choices
-    # Return negative log likelihood
+
     return -np.sum(log_likelihood)
 
-# def mnl_log_likelihood(beta, X, y):
-#     # Convert beta to an array suitable for calculations
-#     beta = np.array(beta)
-    
-#     # Calculate utilities for each alternative: X.dot(beta)
-#     utility = np.dot(X, beta)
-    
-#     # Calculate log-sum-exp for normalization to prevent numerical issues
-#     max_utility = np.max(utility)
-#     log_sum_exp = np.log(np.sum(np.exp(utility - max_utility))) + max_utility
-    
-#     # Calculate log probability
-#     log_prob = utility - log_sum_exp
-    
-#     # Calculate the negative log-likelihood
-#     return -np.sum(log_prob[y == 1])
-
-# # Prepare the input matrix X and the choice vector
-# n_products = 4  # There are 4 products
-# features = ['Yogurt1', 'Yogurt2', 'Yogurt3', 'f', 'p']
-# X = reshaped_yogurt[features].values
-# choices = reshaped_yogurt['y'].values
+# Prepare the input matrix X and the choice vector
+n_products = 4  # There are 4 products
+features = ['Yogurt1', 'Yogurt2', 'Yogurt3', 'f', 'p']
+X = reshaped_yogurt[features].values
+choices = reshaped_yogurt['y'].values
 
 # Define initial guesses for the parameters
 initial_beta = np.zeros(len(features))
 
 # Rerun the optimization with numpy properly imported and initial_beta defined
 result = minimize(negative_log_likelihood, initial_beta, args=(X, choices))
+Coef = result.x
 
-# Print the results
-result.x
+
+Coef_table = pd.DataFrame({
+    'Variables': features,
+    'Coeficient': Coef
+})
+
+Coef_table
 
 ```
 
 ```{python}
-mnl_model = sm.MNLogit(choices, X).fit()
-mnl_summary = mnl_model.summary()
-mnl_results_table = mnl_summary.tables[1]
 
-# To display or print out the table
-print(mnl_results_table)
+# unique_choices = reshaped_yogurt['product'].nunique()
 
+
+# X = reshaped_yogurt[features]
+# X = sm.add_constant(reshaped_yogurt[features])
+# choices = reshaped_yogurt['y']
+
+
+
+# mnl_model = sm.MNLogit(choices, X).fit()
+# mnl_summary = mnl_model.summary()
+# mnl_results_table = mnl_summary.tables[1]
+
+# # To display or print out the table
+# print(mnl_results_table)
 ```
+
+
 
 ### Discussion
 
@@ -308,7 +255,36 @@ The per-unit monetary measure of brand value between the most-preferred yogurt (
 
 One benefit of the MNL model is that we can simulate counterfactuals (eg, what if the price of yogurt 1 was $0.10/oz instead of $0.08/oz).
 
-Calculate the market shares in the market at the time the data were collected.  Then, increase the price of yogurt 1 by $0.10 and use your fitted model to predict p(y|x) for each consumer and each product (this should be a matrix of $N \times 4$ estimated choice probabilities).  Take the column averages to get the new, expected market shares that result from the $0.10 price increase to yogurt 1.  Do the yogurt 1 market shares decrease?_
+**Calculate the market shares in the market at the time the data were collected.  Then, increase the price of yogurt 1 by $0.10 and use your fitted model to predict p(y|x) for each consumer and each product (this should be a matrix of $N \times 4$ estimated choice probabilities).  Take the column averages to get the new, expected market shares that result from the $0.10 price increase to yogurt 1.  Do the yogurt 1 market shares decrease?**
+
+```{python}
+#reload the function cuz the disconnecting between tasks
+def negative_log_likelihood(beta, X, choices):
+    # Utility calculation
+    utility = X.dot(beta)
+    # Exponentiated utilities
+    exp_util = np.exp(utility)
+    # Sum of exponentiated utilities across choices
+    sum_exp_util = np.sum(exp_util.reshape(-1, 4), axis=1)
+    # Compute choice probabilities
+    probabilities = exp_util / np.repeat(sum_exp_util, 4)
+    # Log of probabilities of chosen alternatives
+    log_likelihood = np.log(probabilities) * choices
+
+    return -np.sum(log_likelihood)
+
+# Prepare the input matrix X and the choice vector
+n_products = 4  # There are 4 products
+features = ['Yogurt1', 'Yogurt2', 'Yogurt3', 'f', 'p']
+X = reshaped_yogurt[features].values
+choices = reshaped_yogurt['y'].values
+
+# Define initial guesses for the parameters
+initial_beta = np.zeros(len(features))
+
+# Rerun the optimization with numpy properly imported and initial_beta defined
+result = minimize(negative_log_likelihood, initial_beta, args=(X, choices))
+```
 
 ```{python}
 def calculate_probabilities(beta, X):
@@ -318,19 +294,23 @@ def calculate_probabilities(beta, X):
     probabilities = exp_util / np.repeat(sum_exp_util, n_products)
     return probabilities.reshape(-1, n_products)
 
-# Use the estimated beta values from the optimization
 estimated_beta = result.x
-
 # Calculate the initial choice probabilities for all products and all consumers
 initial_probabilities = calculate_probabilities(estimated_beta, X)
 
 # Calculate the current market shares by taking the mean of probabilities across all consumers for each product
 current_market_shares = np.mean(initial_probabilities, axis=0)
 
-# Display the current market shares
-current_market_shares
+# Display the new market shares
+current_market_shares_df = pd.DataFrame({
+    'Product': ['Yogurt 1', 'Yogurt 2', 'Yogurt 3', 'Yogurt 4'],
+    'Current Market Share': current_market_shares
+})
+
+current_market_shares_df
 
 ```
+
 
 The current market shares for the four yogurt products are approximately:
 
@@ -343,6 +323,7 @@ Yogurt 3: 2.9%
 Yogurt 4: 22.8%
 
 Next, let's increase the price of Yogurt 1 by $0.10 and then use the fitted model to predict the new choice probabilities. We'll see how the market shares change, particularly for Yogurt 1, as a result of this price increase.
+
 
 ```{python}
 # Increase the price of Yogurt 1 by $0.10
@@ -358,7 +339,12 @@ new_probabilities = calculate_probabilities(estimated_beta, X_new_prices)
 new_market_shares = np.mean(new_probabilities, axis=0)
 
 # Display the new market shares
-new_market_shares
+new_market_shares_df = pd.DataFrame({
+    'Product': ['Yogurt 1', 'Yogurt 2', 'Yogurt 3', 'Yogurt 4'],
+    'New Market Share': new_market_shares
+})
+
+new_market_shares_df
 
 ```
 
@@ -385,9 +371,7 @@ This demonstrates the sensitivity of market share to price changes in competitiv
 
 ### Data
 
-_todo: download the dataset from here:_ http://goo.gl/5xQObB 
-
-_todo: describe the data a bit. How many respondents took the conjoint survey?  How many choice tasks did each respondent complete?  How many alternatives were presented on each choice task? For each alternative._
+**Load data and Describe the data**
 
 ```{python}
 minivan = pd.read_csv("rintro-chapter13conjoint.csv")
@@ -406,7 +390,6 @@ minivan
 |`choice` |Whether the alternative was chosen (1) or not (0).|
 ::::
 
-The attributes (levels) were number of seats (6,7,8), cargo space (2ft, 3ft), engine type (gas, hybrid, electric), and price (in thousands of dollars).
 
 ```{python}
 # Number of respondents
@@ -419,7 +402,9 @@ tasks_per_respondent = minivan.groupby('resp.id')['ques'].nunique()
 # Assuming the structure is consistent across the dataset
 alternatives_per_task = minivan.groupby(['resp.id', 'ques'])['alt'].nunique().max()
 
-num_respondents, tasks_per_respondent.describe(), alternatives_per_task
+print("Number of Respondents:", num_respondents)
+print(tasks_per_respondent.describe())
+print("Number of Alternatives per Choice Task:",alternatives_per_task)
 ```
 
 **Here's a summary of the conjoint survey data:**
@@ -430,9 +415,11 @@ num_respondents, tasks_per_respondent.describe(), alternatives_per_task
 
 - Number of Alternatives per Choice Task: Each choice task presented 3 alternatives.
 
+The attributes (levels) were number of seats (6,7,8), cargo space (2ft, 3ft), engine type (gas, hybrid, electric), and price (in thousands of dollars).
+
 ### Model
 
-_todo: estimate a MNL model omitting the following levels to avoide multicollinearity (6 seats, 2ft cargo, and gas engine). Include price as a continuous variable. Show a table of coefficients and standard errors.  You may use your own likelihood function from above, or you may use a function from a package/library to perform the estimation._ 
+**Estimate a MNL model omitting the following levels to avoide multicollinearity (6 seats, 2ft cargo, and gas engine) and show the table of Coefficients and Standard Errors**
 
 ```{python}
 import statsmodels.api as sm
@@ -458,6 +445,7 @@ mnl_results_table = mnl_summary.tables[1]
 print(mnl_results_table)
 ```
 
+
 ### Results
 
 Interpretation:
@@ -474,7 +462,7 @@ This feature is preferred over the baseline of 2ft cargo space, as indicated by 
 Engine Hybrid and Electric: Both hybrid and electric engines are less preferred compared to a traditional gas engine, with electric being the least preferred among the options.
 
 
-_todo: Use the price coefficient as a dollar-per-util conversion factor. What is the dollar value of 3ft of cargo space as compared to 2ft of cargo space?_
+**Use the price coefficient as a dollar-per-util conversion factor. We could find the dollar value of 3ft of cargo space as compared to 2ft of cargo space:**
 
 ```{python}
  # Coefficients from the model results
@@ -483,13 +471,13 @@ price_coeff = -0.1591
 
 # Calculate the dollar value of having 3ft of cargo space compared to 2ft
 dollar_value_cargo = (cargo_coeff / price_coeff) * (-1)
-dollar_value_cargo
+print("The Dolla Value of having 3ft cargo space compared to 2ft:", round(dollar_value_cargo, 3))
 
 ```
 
 The dollar value of having 3 feet of cargo space compared to 2 feet, based on the model, is approximately $2,756. This amount represents the additional value that respondents place on having an extra foot of cargo space in their vehicle choice.
 
-_todo: assume the market consists of the following 6 minivans. Predict the market shares of each minivan in the market._
+**Assume the market consists of the following 6 minivans. Predict the market shares of each minivan in the market.**
 
 | Minivan | Seats | Cargo | Engine | Price |
 |---------|-------|-------|--------|-------|
@@ -501,62 +489,83 @@ _todo: assume the market consists of the following 6 minivans. Predict the marke
 | F       | 7     | 2     | Hyb    | 35    |
 
 
-
 ```{python}
-# Define the minivans data according to the attributes
-minivans = pd.DataFrame({
-    'Minivan': ['A', 'B', 'C', 'D', 'E', 'F'],
-    'Seats': [7, 6, 8, 7, 6, 7],
-    'Cargo': [2, 2, 2, 3, 2, 2],
-    'Engine': ['Hyb', 'Gas', 'Gas', 'Gas', 'Elec', 'Hyb'],
-    'Price': [30, 30, 30, 40, 40, 35]
+# Coefficients from the MNL model
+coef_const = 5.5322
+coef_price = -0.1591
+coef_seat_7 = -0.5248
+coef_seat_8 = -0.2931
+coef_cargo_3ft = 0.4385
+coef_eng_elec = -1.4347
+coef_eng_hyb = -0.7605
+
+# Define the attributes of each minivan
+minivans = [
+    {"seats": 7, "cargo": 2, "engine": "Hyb", "price": 30},
+    {"seats": 6, "cargo": 2, "engine": "Gas", "price": 30},
+    {"seats": 8, "cargo": 2, "engine": "Gas", "price": 30},
+    {"seats": 7, "cargo": 3, "engine": "Gas", "price": 40},
+    {"seats": 6, "cargo": 2, "engine": "Elec", "price": 40},
+    {"seats": 7, "cargo": 2, "engine": "Hyb", "price": 35}
+]
+
+# Function to calculate utility
+def calculate_utility(minivan):
+    utility = coef_const
+    utility += coef_price * minivan["price"]
+    if minivan["seats"] == 7:
+        utility += coef_seat_7
+    elif minivan["seats"] == 8:
+        utility += coef_seat_8
+    if minivan["cargo"] == 3:
+        utility += coef_cargo_3ft
+    if minivan["engine"] == "Elec":
+        utility += coef_eng_elec
+    elif minivan["engine"] == "Hyb":
+        utility += coef_eng_hyb
+    return utility
+
+# Calculate utilities for each minivan
+utilities = [calculate_utility(minivan) for minivan in minivans]
+
+# Calculate the market shares using the softmax function
+exp_utilities = np.exp(utilities)
+market_shares = exp_utilities / np.sum(exp_utilities)
+
+# Create a DataFrame for the results
+minivan_names = ['A', 'B', 'C', 'D', 'E', 'F']
+market_shares_df = pd.DataFrame({
+    'Minivan': minivan_names,
+    'Market Share': market_shares
 })
 
-# Create dummy variables for the minivan data
-minivans['seat_7'] = (minivans['Seats'] == 7).astype(int)
-minivans['seat_8'] = (minivans['Seats'] == 8).astype(int)
-minivans['cargo_3ft'] = (minivans['Cargo'] == 3).astype(int)
-minivans['eng_hyb'] = (minivans['Engine'] == 'Hyb').astype(int)
-minivans['eng_elec'] = (minivans['Engine'] == 'Elec').astype(int)
-
-# Extract the coefficients from the model
-
-# Check if the keys exist in the params and then extract them
-params = mnl_model.params
-intercept = params['const'] if 'const' in params.index else 0
-coeff_seats_7 = params['seat_7'] if 'seat_7' in params.index else 0
-coeff_seats_8 = params['seat_8'] if 'seat_8' in params.index else 0
-coeff_cargo_3ft = params['cargo_3ft'] if 'cargo_3ft' in params.index else 0
-coeff_eng_hyb = params['eng_hyb'] if 'eng_hyb' in params.index else 0
-coeff_eng_elec = params['eng_elec'] if 'eng_elec' in params.index else 0
-coeff_price = params['price'] if 'price' in params.index else 0
-
-
-
-# Calculate the utilities for each minivan
-minivans['Utility'] = (intercept +
-                       coeff_seats_7 * minivans['seat_7'] +
-                       coeff_seats_8 * minivans['seat_8'] +
-                       coeff_cargo_3ft * minivans['cargo_3ft'] +
-                       coeff_eng_hyb * minivans['eng_hyb'] +
-                       coeff_eng_elec * minivans['eng_elec'] +
-                       coeff_price * minivans['Price'])
-
-# Convert utilities to market shares
-minivans['Market_Share'] = np.exp(minivans['Utility']) / np.exp(minivans['Utility']).sum()
-
-minivans[['Minivan', 'Utility', 'Market_Share']]
+market_shares_df
 
 ```
 
-Minivan B appears to be the most preferred option with the highest utility leading to a market share of 33.39%. This suggests that the combination of features and price for Minivan B aligns well with consumer preferences in the modelled scenario.
+**High Market Share**
 
-Minivan A also shows strong preference, holding nearly 20% of the market share.
+Minivan B (41.97%): 6 seats, 2ft cargo, gas engine, $30. This minivan has the highest market share, suggesting that consumers highly value the combination of a lower price ($30) with standard features (6 seats, 2ft cargo, gas engine). This option appears to be the most cost-effective and appeals to the majority of consumers.
 
-Minivan C follows closely with almost 25% market share, indicating that it also meets a significant portion of consumer preferences.
+Minivan C (31.31%): 8 seats, 2ft cargo, gas engine, $30. This minivan also has a significant market share, indicating that some consumers are willing to opt for a vehicle with more seating capacity at the same price. The additional seats (8 seats) add utility, making it an attractive option despite not being the top choice.
 
-Minivans D, E, and F exhibit lower utilities, translating into smaller market shares. These models, possibly due to higher prices or less preferred attributes, are less attractive to the modeled consumer base.
+**Moderate Market Share**
+Minivan A (11.61%): 7 seats, 2ft cargo, hybrid engine, $30. The hybrid engine in this minivan reduces its market share compared to the purely gas-powered options at the same price point. While hybrid engines are generally valued for their efficiency, the preference in this case seems to be towards conventional gas engines at a lower price.
 
+**Low Market Share**
+Minivan F (5.24%): 7 seats, 2ft cargo, hybrid engine, $35. The increase in price to $35, coupled with similar features as Minivan A, significantly lowers its market share. This suggests that consumers are sensitive to price increases and are less inclined to pay an extra $5 for a similar hybrid vehicle with the same number of seats and cargo space.
+
+Minivan D (7.84%): 7 seats, 3ft cargo, gas engine, $40. Despite offering more cargo space (3ft), the higher price of $40 detracts from its attractiveness. This indicates that the additional cargo space does not compensate for the higher price for most consumers.
+
+Minivan E (2.04%): 6 seats, 2ft cargo, electric engine, $40. This minivan has the lowest market share, suggesting that consumers place a relatively low value on electric engines in this context, especially when paired with a high price. The cost does not justify the perceived benefits of the electric engine, resulting in minimal consumer interest.
+
+Key Takeaways:
+
+Price Sensitivity: Consumers show a strong preference for lower-priced options. Minivans priced at $30 dominate the market shares, indicating high price sensitivity.
+
+Engine Type Preferences: Gas engines are favored over hybrid and electric engines, reflecting either cost concerns or possibly a lack of perceived additional value from alternative engine types at higher prices.
+
+Feature Trade-offs: Additional features like more seats or cargo space are valued but have a diminishing return when paired with higher prices. Consumers appear to balance their preferences for additional features with their willingness to pay more.
 
 
 
