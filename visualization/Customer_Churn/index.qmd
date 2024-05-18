@@ -127,7 +127,7 @@ _ =plt.ylabel('Revenue')
 plt.show()
 ```
 
-## Row
+## Row {height="20%"}
 
 ```{python}
 #| title: Summary Statistics
