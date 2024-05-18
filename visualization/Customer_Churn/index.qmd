@@ -6,32 +6,28 @@ format:
 ---
 
 ```{python}
-#| tags: [parameters]
+# | tags: [parameters]
 
 # to render w/ a different product type:
 # quarto render dashboard.qmd -P product_type:Premium
 
-product_type = "Standard"
 ```
 
 ```{python}
 import pandas as pd
 # from helpers import color_palette, plpipot_churn_reason, plot_contract_type, table_purchases
-# from matplotlib import rcParams
-# from itables import show
+from matplotlib import rcParams
+from itables import show
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# rcParams.update({"savefig.bbox": "tight"})
+rcParams.update({"savefig.bbox": "tight"})
 
-churn = pd.read_parquet('./Visualization/Customer_Churn/s_mobile.parquet')
+churn = pd.read_parquet('s_mobile.parquet')
 churn.drop('customer', axis=1, errors='ignore', inplace=True)
 ```
 
-```{python}
-len(churn[churn['churn'] == "no"])
-print(churn.columns)
-```
-
-# Churn (`{python} product_type`)
+# Churn
 
 ## Row
 
@@ -72,21 +68,20 @@ dict(
 dict(
   icon = "bullseye",
   color = "warning",
-  value = "10%"
+  value = "20%"
 )
 ```
 
-## Row {height="40%"}
+## Row {height="30%"}
 
 ```{python}
-import matplotlib.pyplot as plt
-import seaborn as sns
 #| title: Customer Care Calls by Churn Status
+
 plt.figure(figsize=(10, 6))
 sns.boxplot(x='churn', y='custcare', data=churn, palette = ['#ff9999', '#66b3ff'])
-plt.title('Customer Care Calls by Churn Status')
-plt.xlabel('Churn')
-plt.ylabel('Customer Care Calls')
+_ =plt.title('Customer Care Calls by Churn Status')
+_ =plt.xlabel('Churn')
+_ =plt.ylabel('Customer Care Calls')
 plt.show()
 ```
 
@@ -95,47 +90,124 @@ plt.show()
 #| title: Refurbished Status by Churn Rate
 plt.figure(figsize=(10, 6))
 sns.countplot(x='refurb', hue='churn', data=churn, palette = ['#ff9999', '#66b3ff'])
-plt.title('Churn Rate by Refurbished Status')
-plt.xlabel('Refurbished Status')
-plt.ylabel('Count')
+_ =plt.title('Churn Rate by Refurbished Status')
+_ =plt.xlabel('Refurbished Status')
+_ =plt.ylabel('Count')
 plt.show()
 ```
 
-## Row
+## Row {height="30%"}
 ```{python}
-plt.figure(figsize=(12, 8))
+#| title: Correlation Heatmap
+plt.figure(figsize=(10, 6))
 mapping_dict = {'yes': 1, 'no': 0}
 
-for col in churn.columns:
-    if churn[col].dtype == 'object':  # only apply map to object columns
-        churn[col] = churn[col].map(mapping_dict)
+churn_num = churn[['changer', 'changem', 'revenue', 'mou', 'overage', 'roam', 'conference', 'months', 'uniqsubs', 'custcare', 'retcalls', 'dropvce', 'eqpdays']]
+for col in churn_num.columns:
+    if churn_num[col].dtype == 'object':  # only apply map to object columns
+        churn_num[col] = churn_num[col].map(mapping_dict)
 
-corr = churn.corr()
+# Now, convert the remaining non-numeric values to NaN
+for col in churn_num.columns:
+    churn_num[col] = pd.to_numeric(churn_num[col], errors='coerce')
+
+corr = churn_num.corr()
 sns.heatmap(corr, annot=True, cmap='coolwarm', center=0)
-plt.title('Correlation Heatmap')
+_ =plt.title('Correlation Heatmap')
+plt.show()
+```
+
+```{python}
+#| title: Revenue vs. Minutes of Use with Churn Status
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='mou', y='revenue', hue='churn', data=churn, palette=['#ff9999', '#66b3ff'])
+_ =plt.title('Revenue vs. Minutes of Use by Churn Status')
+_ =plt.xlabel('Minutes of Use')
+_ =plt.ylabel('Revenue')
 plt.show()
 ```
 
 ## Row
 
 ```{python}
-#| title: Purchase characteristics
-from IPython.display import Markdown
-characteristics = table_purchases(purchase_characteristics, product_type)
-Markdown(characteristics.to_markdown(index = False))
+#| title: Summary Statistics
+# Calculate summary statistics
+total_customers = churn.shape[0]
+churned_customers = churn[churn['churn'] == 1].shape[0]
+non_churned_customers = churn[churn['churn'] == 0].shape[0]
+churned_percentage = (churned_customers / total_customers) * 100
+non_churned_percentage = (non_churned_customers / total_customers) * 100
+
+# Revenue and usage metrics
+revenue_stats = churn['revenue'].describe()
+mou_stats = churn['mou'].describe()
+overage_stats = churn['overage'].describe()
+roam_stats = churn['roam'].describe()
+conference_stats = churn['conference'].describe()
+
+# Customer service interaction
+custcare_stats = churn['custcare'].describe()
+retcalls_stats = churn['retcalls'].describe()
+dropvce_stats = churn['dropvce'].describe()
+
+# Device and service attributes
+refurbished_percentage = (churn['refurb'] == 1).mean() * 100
+smartphone_percentage = (churn['smartphone'] == 1).mean() * 100
+highcreditr_percentage = (churn['highcreditr'] == 1).mean() * 100
+mcycle_percentage = (churn['mcycle'] == 1).mean() * 100
+car_percentage = (churn['car'] == 1).mean() * 100
+travel_percentage = (churn['travel'] == 1).mean() * 100
+
+# Regional and demographic insights
+region_distribution = churn['region'].value_counts(normalize=True) * 100
+occupation_distribution = churn['occupation'].value_counts(normalize=True) * 100
+
+# Create a summary statistics table
+summary_table = pd.DataFrame({
+    'Metric': [
+        'Total Customers', 'Churned Customers', 'Non-Churned Customers', 'Churned Percentage', 'Non-Churned Percentage',
+        'Mean Revenue', 'Median Revenue', 'Revenue Std Dev',
+        'Mean MOU', 'Median MOU', 'MOU Std Dev',
+        'Mean Overage', 'Median Overage', 'Overage Std Dev',
+        'Mean Roaming Calls', 'Median Roaming Calls', 'Roaming Calls Std Dev',
+        'Mean Conference Calls', 'Median Conference Calls', 'Conference Calls Std Dev',
+        'Mean Customer Care Calls', 'Median Customer Care Calls', 'Customer Care Calls Std Dev',
+        'Mean Retention Calls', 'Median Retention Calls', 'Retention Calls Std Dev',
+        'Mean Dropped Calls', 'Median Dropped Calls', 'Dropped Calls Std Dev',
+        'Percentage with Refurbished Devices', 'Percentage with Smartphones',
+        'Percentage with High Credit Rating', 'Percentage with Motorcycles',
+        'Percentage with Cars', 'Percentage with International Travel',
+    ],
+    'Value': [
+        total_customers, churned_customers, non_churned_customers, churned_percentage, non_churned_percentage,
+        revenue_stats['mean'], revenue_stats['50%'], revenue_stats['std'],
+        mou_stats['mean'], mou_stats['50%'], mou_stats['std'],
+        overage_stats['mean'], overage_stats['50%'], overage_stats['std'],
+        roam_stats['mean'], roam_stats['50%'], roam_stats['std'],
+        conference_stats['mean'], conference_stats['50%'], conference_stats['std'],
+        custcare_stats['mean'], custcare_stats['50%'], custcare_stats['std'],
+        retcalls_stats['mean'], retcalls_stats['50%'], retcalls_stats['std'],
+        dropvce_stats['mean'], dropvce_stats['50%'], dropvce_stats['std'],
+        refurbished_percentage, smartphone_percentage,
+        highcreditr_percentage, mcycle_percentage,
+        car_percentage, travel_percentage,
+    ]
+})
+
+summary_table
+
 ```
 
-# Data 
+# Data
 
 ```{python}
-#| title: Churn Reason
-show(churn_reason[churn_reason["product"]==product_type])
+show(churn)
 ```
 
 ```{python}
 #| title: Contracts by State
-show(churn[churn['product'] == product_type]
-  .groupby(['contract', 'state'])
-  .size()
-  .reset_index(name='count'))
+# show(churn[churn['product'] == product_type]
+#   .groupby(['contract', 'state'])
+#   .size()
+#   .reset_index(name='count'))
 ```

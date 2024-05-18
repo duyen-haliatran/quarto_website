@@ -2,13 +2,9 @@
   {
     "listing": "/projects.html",
     "items": [
-      "/projects/cg-uplift/cg_ad_random_description.html",
-      "/projects/cg-uplift/cg-uplift.html",
-      "/projects/cg-uplift/cg_ad_treatment_description.html",
+      "/projects/project3/trial_cop.html",
       "/projects/cg-uplift/index.html",
-      "/projects/cg-uplift/cg_organic_control_description.html",
       "/projects/project1/index.html",
-      "/projects/project3/trial.html",
       "/projects/project3/index.html",
       "/projects/project2/index.html"
     ]
@@ -18,7 +14,8 @@
     "items": [
       "/visualization/A:Btesting/index.html",
       "/visualization/cg/index.html",
-      "/visualization/Possion/index.html"
+      "/visualization/Possion/index.html",
+      "/visualization/Customer_Churn/index.html"
     ]
   }
 ]
