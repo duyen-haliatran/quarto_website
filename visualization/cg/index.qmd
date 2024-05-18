@@ -24,15 +24,15 @@ import pyrsm as rsm
 from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
 
-cg_organic_control = pd.read_parquet("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/cg/cg_organic_control.parquet").reset_index(drop=True)
+cg_organic_control = pd.read_parquet("cg_organic_control.parquet").reset_index(drop=True)
 
 
 ## loading the treatment data
-cg_ad_treatment = pd.read_parquet("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/cg/cg_ad_treatment.parquet").reset_index(drop=True)
+cg_ad_treatment = pd.read_parquet("cg_ad_treatment.parquet").reset_index(drop=True)
 
 
 # Load the ad random data"
-cg_ad_random = pd.read_parquet("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/cg/cg_ad_random.parquet")
+cg_ad_random = pd.read_parquet("cg_ad_random.parquet")
 
 # a. Add "ad" to cg_ad_random and set its value to 1 for all rows
 cg_ad_random["ad"] = 1
