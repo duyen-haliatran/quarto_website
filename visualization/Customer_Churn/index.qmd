@@ -1,0 +1,141 @@
+---
+title: "S-mobile Customer Churn"
+format: 
+    dashboard:
+        orientation: rows
+---
+
+```{python}
+#| tags: [parameters]
+
+# to render w/ a different product type:
+# quarto render dashboard.qmd -P product_type:Premium
+
+product_type = "Standard"
+```
+
+```{python}
+import pandas as pd
+# from helpers import color_palette, plpipot_churn_reason, plot_contract_type, table_purchases
+# from matplotlib import rcParams
+# from itables import show
+
+# rcParams.update({"savefig.bbox": "tight"})
+
+churn = pd.read_parquet('./Visualization/Customer_Churn/s_mobile.parquet')
+churn.drop('customer', axis=1, errors='ignore', inplace=True)
+```
+
+```{python}
+len(churn[churn['churn'] == "no"])
+print(churn.columns)
+```
+
+# Churn (`{python} product_type`)
+
+## Row
+
+```{python}
+#| content: valuebox
+#| title: "Total record"
+dict(
+  icon = "archive",
+  color = "light",
+  value = "69,000"
+)
+```
+
+```{python}
+#| content: valuebox
+#| title: "Retaining Customer"
+dict(
+  icon = "graph-down",
+  color = "light",
+  value = "20,100"
+)
+```
+
+
+```{python}
+#| content: valuebox
+#| title: "Exit Customers"
+dict(
+  icon = "graph-down",
+  color = "light",
+  value = "48,900"
+)
+```
+
+```{python}
+#| content: valuebox
+#| title: "Current churn rate"
+dict(
+  icon = "bullseye",
+  color = "warning",
+  value = "10%"
+)
+```
+
+## Row {height="40%"}
+
+```{python}
+import matplotlib.pyplot as plt
+import seaborn as sns
+#| title: Customer Care Calls by Churn Status
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='churn', y='custcare', data=churn, palette = ['#ff9999', '#66b3ff'])
+plt.title('Customer Care Calls by Churn Status')
+plt.xlabel('Churn')
+plt.ylabel('Customer Care Calls')
+plt.show()
+```
+
+
+```{python}
+#| title: Refurbished Status by Churn Rate
+plt.figure(figsize=(10, 6))
+sns.countplot(x='refurb', hue='churn', data=churn, palette = ['#ff9999', '#66b3ff'])
+plt.title('Churn Rate by Refurbished Status')
+plt.xlabel('Refurbished Status')
+plt.ylabel('Count')
+plt.show()
+```
+
+## Row
+```{python}
+plt.figure(figsize=(12, 8))
+mapping_dict = {'yes': 1, 'no': 0}
+
+for col in churn.columns:
+    if churn[col].dtype == 'object':  # only apply map to object columns
+        churn[col] = churn[col].map(mapping_dict)
+
+corr = churn.corr()
+sns.heatmap(corr, annot=True, cmap='coolwarm', center=0)
+plt.title('Correlation Heatmap')
+plt.show()
+```
+
+## Row
+
+```{python}
+#| title: Purchase characteristics
+from IPython.display import Markdown
+characteristics = table_purchases(purchase_characteristics, product_type)
+Markdown(characteristics.to_markdown(index = False))
+```
+
+# Data 
+
+```{python}
+#| title: Churn Reason
+show(churn_reason[churn_reason["product"]==product_type])
+```
+
+```{python}
+#| title: Contracts by State
+show(churn[churn['product'] == product_type]
+  .groupby(['contract', 'state'])
+  .size()
+  .reset_index(name='count'))
+```
