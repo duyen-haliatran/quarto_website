@@ -1,0 +1,1906 @@
+---
+title: 'Pentathlon: Next Product to Buy Models'
+author: Duyen Tran
+date: today
+callout-appearance: minimal # this hides the blue "i" icon on .callout-notes
+editor_options: 
+  chunk_output_type: console
+---
+
+PROJECT SUMMARY
+
+• Project Goal: Optimize profit by tailoring email campaigns for 7 departments to individual customers based on predictive modeling.
+
+Modeling Approach:
+
+• Logistic Regression: Utilized for its ability to predict the probability of customer engagement based on email content.
+• Linear Regression: Employed to predict average order size from each customer as a continuous outcome.
+• Random Forest: Chosen for its robustness and ability to capture non-linear patterns and feature interactions.
+• Neural Network: Applied to leverage its deep learning capabilities in identifying complex patterns within customer data.
+• XGBoost:Selectedforitse iciency,modelperformance,andabilitytohandleavarietyofdata types and distributions.
+
+Model Training and Tuning:
+
+• Conducted comprehensive training and hyperparameter tuning for each model to ensure op- timal performance.
+• Employed methods like cross-validation and grid search, particularly for computationally intensive models like Random Forest.
+
+Profit Analysis:
+• Evaluated the predicted profit increase from each model to identify the most effective ap- proach.
+• Analyzed model-specific trade-offs, such as training time (e.g., Random Forest’s extensive training period).
+
+Email Policy Evaluation:
+• Assessed the impact of each model on the email policy proposal to ensure alignment with profit optimization goals.
+
+
+
+## Data Preparation
+
+```{python}
+import pandas as pd
+import pyrsm as rsm
+```
+
+```{python}
+## loading the data - this dataset must NOT be changed
+pentathlon_nptb = pd.read_parquet("pentathlon_nptb.parquet")
+
+```
+
+
+### Pentathon: Next Product To Buy 
+
+The available data is based on the last e-mail sent to each Pentathlon customer. Hence, an observation or row in the data is a "customer-promotional e-mail" pair. The data contains the following basic demographic information available to Pentathlon:
+
+* "age": Customer age(coded in 4 buckets:"<30", "30 to 44", "45 to 59", and ">=60") 
+* "female": Gender identity coded as Female "yes" or "no"
+* "income": Income in Euros, rounded to the nearest EUR5,000
+* "education": Percentage of college graduates in the customer's neighborhood, coded from 0-100
+* "children": Average number of children in the customer's neighborhood
+
+The data also contains basic historical information about customer purchases, specifically, a department-specific frequency measure.
+
+* "freq_endurance-freq_racquet": Number of purchases in each department in the last year, excluding any purchase in response to the last email.
+
+The key outcome variables are:
+
+* "buyer": Did the customer click on the e-mail and complete a purchase within two days of receiving the e-mail ("yes" or "no")?
+* "total_os": Total order size (in Euros) conditional on the customer having purchased (buyer == "yes"). This measures spending across all departments, not just the department that sent the message
+
+> Note: In addition to the six message groups, a seventh group of customers received no promotional e-mails for the duration of the test ("control").
+
+```{python}
+pentathlon_nptb.info()
+```
+
+```{python}
+pentathlon_nptb['buyer_yes'] = rsm.ifelse(pentathlon_nptb['buyer'] == 'yes', 1, 0)
+pentathlon_nptb['buyer_yes'].value_counts()
+```
+
+#### Check the training data and testing data, make sure they are splitted a 70-30 ratio
+
+```{python}
+pd.crosstab(pentathlon_nptb["message"], pentathlon_nptb["training"])
+```
+
+```{python}
+pentathlon_nptb.training.value_counts(normalize=True)
+```
+
+```{python}
+pentathlon_nptb.hist(figsize=(10, 10), bins=30)
+```
+
+## Logistic Regression Model
+
+#### Check cross tab between the outcome variable and the key predictor variable
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "age")
+ct.summary(output = "perc_row")
+ct.plot(plots = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "children")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "message")
+ct.summary(output = "perc_row")
+ct.plot(plots = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "freq_endurance")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "freq_strength")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "freq_water")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "freq_team")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "freq_backcountry")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "freq_racquet")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs(pentathlon_nptb.query("training == 1"), "buyer", "income")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+pentathlon_nptb[pentathlon_nptb["training"] == 1]
+```
+
+### Build a logistic regression model
+
+```{python}
+evar = pentathlon_nptb.columns.to_list()
+evar = evar[evar.index("message"):]
+evar = evar[:evar.index("freq_racquet")+1]
+evar
+```
+
+```{python}
+lr = rsm.model.logistic(
+    data = {"pentathlon_nptb": pentathlon_nptb[pentathlon_nptb["training"] == 1]},
+    rvar = "buyer_yes",
+    evar = evar,
+)
+lr.summary()
+```
+
+```{python}
+lr.coef.round(3)
+```
+
+```{python}
+lr.summary(main = False, vif = True)
+```
+
+```{python}
+lr.plot("vimp")
+```
+
+```{python}
+pentathlon_nptb['pred_lr'] = lr.predict(pentathlon_nptb)['prediction']
+```
+
+```{python}
+dct = {"train" : pentathlon_nptb.query("training == 1"), "test" : pentathlon_nptb.query("training == 0")}
+fig = rsm.gains_plot(dct, "buyer", "yes", "pred_lr")
+```
+
+```{python}
+from sklearn import metrics
+
+# prediction on training set
+pred = pentathlon_nptb.query("training == 1")['pred_lr']
+actual = pentathlon_nptb.query("training == 1")['buyer_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+```{python}
+# prediction on test set
+pred = pentathlon_nptb.query("training == 0")['pred_lr']
+actual = pentathlon_nptb.query("training == 0")['buyer_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+We can conclude that:
+
+The AUC for the training set is 0.884, which indicates that the model has a very good ability to distinguish between the two classes in the training data.
+
+The AUC for the test set is 0.883, which is slightly lower but still indicates a very good predictive performance on unseen data.
+
+The fact that the test AUC is close to the training AUC suggests that the model is generalizing well and not overfitting significantly to the training data. A small decrease from training to test set performance is normal because models will usually perform slightly better on the data they were trained on.
+
+### 1. For each customer determine the message (i.e., endurance, strength, water, team, backcountry, racquet, or no-message) predicted to lead to the highest probability of purchase
+
+```{python}
+# Check the department of the message variable
+pentathlon_nptb["message"].value_counts()
+```
+
+```{python}
+# Create predictions
+pentathlon_nptb["p_control_lr"] = lr.predict(pentathlon_nptb, data_cmd={"message": "control"})["prediction"]
+pentathlon_nptb["p_racquet_lr"] = lr.predict(pentathlon_nptb, data_cmd={"message": "racquet"})["prediction"]
+pentathlon_nptb["p_team_lr"] = lr.predict(pentathlon_nptb, data_cmd={"message": "team"})["prediction"]
+pentathlon_nptb["p_backcountry_lr"] = lr.predict(pentathlon_nptb, data_cmd={"message": "backcountry"})["prediction"]
+pentathlon_nptb["p_water_lr"] = lr.predict(pentathlon_nptb, data_cmd={"message": "water"})["prediction"]
+pentathlon_nptb["p_strength_lr"] = lr.predict(pentathlon_nptb, data_cmd={"message": "strength"})["prediction"]
+pentathlon_nptb["p_endurance_lr"] = lr.predict(pentathlon_nptb, data_cmd={"message": "endurance"})["prediction"]
+pentathlon_nptb
+```
+
+We then extend the prediction to the full database and see how the predictions are distributed.
+
+```{python}
+pentathlon_nptb["message_lr"] = pentathlon_nptb[[
+    "p_control_lr", 
+    "p_endurance_lr", 
+    "p_backcountry_lr", 
+    "p_racquet_lr", 
+    "p_strength_lr", 
+    "p_team_lr", 
+    "p_water_lr"]].idxmax(axis=1)
+pentathlon_nptb["message_lr"].value_counts()
+```
+
+After checking the distribution, we can see that the model predicts that every customer should be sent the same product. The mistake in the analysis above was that the specified model is not sufficiently flexible to allow customization across customers!
+
+The output of the logistic regression above shows that there are indeed some interaction effects taking place in the data. We want to create a model that can capture these interaction effects, which we have done. We are now going to use the model to predict the next product to buy for the full database.
+
+```{python}
+ivar=[f"{e}:message" for e in evar if e != "message"]
+ivar
+```
+
+#### The model is then:
+
+```{python}
+lr_int = rsm.model.logistic(
+    data={"penathlon_nptb": pentathlon_nptb[pentathlon_nptb.training == 1]},
+    rvar="buyer",
+    lev="yes",
+    evar=evar,
+    ivar=ivar
+)
+lr_int.summary()
+```
+
+```{python}
+pentathlon_nptb["pred_lr_int"] = lr_int.predict(pentathlon_nptb)["prediction"]
+```
+
+```{python}
+dct = {"train": pentathlon_nptb.query("training == 1"), "test": pentathlon_nptb.query("training == 0")}
+fig = rsm.gains_plot(dct, "buyer", "yes", "pred_lr_int")
+```
+
+```{python}
+fig = rsm.gains_plot(
+    pentathlon_nptb,
+    "buyer", "yes",
+    ["pred_lr", "pred_lr_int"]
+)
+```
+
+```{python}
+# prediction on training set
+pred = pentathlon_nptb.query("training == 1")['pred_lr_int']
+actual = pentathlon_nptb.query("training == 1")['buyer_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+
+```
+
+```{python}
+# prediction on test set
+pred = pentathlon_nptb.query("training == 0")['pred_lr_int']
+actual = pentathlon_nptb.query("training == 0")['buyer_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+Now, lets repeat the analysis above with the new model.
+
+```{python}
+# Create predictions
+pentathlon_nptb["p_controli_lr"] = lr_int.predict(pentathlon_nptb, data_cmd={"message": "control"})["prediction"]
+pentathlon_nptb["p_racqueti_lr"] = lr_int.predict(pentathlon_nptb, data_cmd={"message": "racquet"})["prediction"]
+pentathlon_nptb["p_teami_lr"] = lr_int.predict(pentathlon_nptb, data_cmd={"message": "team"})["prediction"]
+pentathlon_nptb["p_backcountryi_lr"] = lr_int.predict(pentathlon_nptb, data_cmd={"message": "backcountry"})["prediction"]
+pentathlon_nptb["p_wateri_lr"] = lr_int.predict(pentathlon_nptb, data_cmd={"message": "water"})["prediction"]
+pentathlon_nptb["p_strengthi_lr"] = lr_int.predict(pentathlon_nptb, data_cmd={"message": "strength"})["prediction"]
+pentathlon_nptb["p_endurancei_lr"] = lr_int.predict(pentathlon_nptb, data_cmd={"message": "endurance"})["prediction"]
+pentathlon_nptb
+```
+
+We then extend the prediction to the full database and see how the predictions are distributed.
+
+```{python}
+repl = {
+    "p_controli_lr": "control", 
+    "p_endurancei_lr": "endurance", 
+    "p_backcountryi_lr": "backcountry", 
+    "p_racqueti_lr": "racquet", 
+    "p_strengthi_lr": "strength", 
+    "p_teami_lr": "team", 
+    "p_wateri_lr": "water"}
+```
+
+```{python}
+predictions_lr = [
+    "p_controli_lr", 
+    "p_endurancei_lr", 
+    "p_backcountryi_lr", 
+    "p_racqueti_lr", 
+    "p_strengthi_lr", 
+    "p_teami_lr", 
+    "p_wateri_lr"]
+```
+
+#### Find the highest probability of purchase for each customer, labeled them by the product with the highest probability of purchase
+
+```{python}
+
+pentathlon_nptb["messagei_lr"] = (
+    pentathlon_nptb[predictions_lr]
+    .idxmax(axis=1)
+    .map(repl)
+)
+pentathlon_nptb
+```
+
+```{python}
+# Find the maximum probability of purchase
+pentathlon_nptb["p_max"] = pentathlon_nptb[predictions_lr].max(axis=1)
+```
+
+Approach: First of all, We build a logistic regression model to predict the next product to buy, use buyer_yes as the response variable and the other variables as predictors. After relizing that the model predicts that every customer should be sent the same product i.e, `endurance`, we build another model that can capture these interaction effects. 
+
+We then extend the prediction to the full database. To predict the probability of purchasing for different messages, we use the `data_cmd` to predict the probability of purchasing for different messages.
+
+Finally, we choose the product with the highest probability using `idxmax` to automatically find the best message for each customer. This command also provides a label for the category with the maximum predicted propability of buying accross all the products. Then, create `p_max` to store the maximum predicted probability of purchasing for the best message sellected for each customer.
+
+#### 2. For each message, report the percentage of customers for whom that message or no-message maximizes their probability of purchase
+
+Let's create a `crosstab` to see which products should we send to each customer.
+
+```{python}
+pd.crosstab(index=pentathlon_nptb[pentathlon_nptb.training == 0].messagei_lr, columns="count").apply(rsm.format_nr)
+```
+
+Report the percentage of customers for whom that message is the best message or not the best message.
+
+```{python}
+pentathlon_nptb["messagei_lr"].value_counts(normalize=True)
+```
+
+- `edurance`: The distribution suggests that `endurance` - related messages resonate significantly more with the customers than the other messages.
+
+- `strength`: Wilte not as dominant as `endurance`, `strength` - related messages also play an important role. There might be opportunities to further optimize or tailor these messages to increase their effectiveness.
+
+- Other categories such as `racquet`, `water`, `team`, `backcountry` have much smaller proportions, suggesting that they are less often the best choice for maximizing the probability of purchase.
+
+- `control`: The negligible role of `control` in maximizing the probability suggrest that any engagement, even if not perfectly oplimized, tends to be better than no engagement at all. However, it's also essential to consider the context and the potential costs of sending messages to customers.
+
+Create a table with the average purchase probability if we send the message for each product to everyone.
+
+```{python}
+pentathlon_nptb.loc[pentathlon_nptb.training == 0, predictions_lr].agg("mean").sort_values(
+    ascending=False).apply(rsm.format_nr, perc=True)
+```
+
+#### 3. Expected profit
+
+```{python}
+# Calculate the actual order size
+ordersize = pentathlon_nptb[(pentathlon_nptb.training == 1) & (pentathlon_nptb.buyer_yes == 1)].groupby("message")["total_os"].mean()
+ordersize
+```
+
+#### Creat Linear model to predict ordersize 
+
+```{python}
+reg = rsm.model.regress(
+    data = {"pentathlon_nptb": pentathlon_nptb[(pentathlon_nptb.training == 1) & (pentathlon_nptb.buyer == "yes")]},
+    rvar ="total_os",
+    evar = evar,
+    ivar = ivar
+)
+reg.summary()
+```
+
+```{python}
+reg.coef.round(3)
+```
+
+```{python}
+pentathlon_nptb["pos_control_reg"] = reg.predict(pentathlon_nptb, data_cmd={"message": "control"})["prediction"]
+pentathlon_nptb["pos_racquet_reg"] = reg.predict(pentathlon_nptb, data_cmd={"message": "racquet"})["prediction"]
+pentathlon_nptb["pos_team_reg"] = reg.predict(pentathlon_nptb, data_cmd={"message": "team"})["prediction"]
+pentathlon_nptb["pos_backcountry_reg"] = reg.predict(pentathlon_nptb, data_cmd={"message": "backcountry"})["prediction"]
+pentathlon_nptb["pos_water_reg"] = reg.predict(pentathlon_nptb, data_cmd={"message": "water"})["prediction"]
+pentathlon_nptb["pos_strength_reg"] = reg.predict(pentathlon_nptb, data_cmd={"message": "strength"})["prediction"]
+pentathlon_nptb["pos_endurance_reg"] = reg.predict(pentathlon_nptb, data_cmd={"message": "endurance"})["prediction"]
+```
+
+#### Calculate the expected profit for each product
+
+```{python}
+pentathlon_nptb["ep_control_lr"] = pentathlon_nptb["p_control_lr"] * pentathlon_nptb["pos_control_reg"] * 0.4
+pentathlon_nptb["ep_racquet_lr"] = pentathlon_nptb["p_racquet_lr"] * pentathlon_nptb["pos_racquet_reg"] * 0.4
+pentathlon_nptb["ep_team_lr"] = pentathlon_nptb["p_team_lr"] * pentathlon_nptb["pos_team_reg"] * 0.4
+pentathlon_nptb["ep_backcountry_lr"] = pentathlon_nptb["p_backcountry_lr"] * pentathlon_nptb["pos_backcountry_reg"] * 0.4
+pentathlon_nptb["ep_water_lr"] = pentathlon_nptb["p_water_lr"] * pentathlon_nptb["pos_water_reg"] * 0.4
+pentathlon_nptb["ep_strength_lr"] = pentathlon_nptb["p_strength_lr"] * pentathlon_nptb["pos_strength_reg"] * 0.4
+pentathlon_nptb["ep_endurance_lr"] = pentathlon_nptb["p_endurance_lr"] * pentathlon_nptb["pos_endurance_reg"] * 0.4
+```
+
+To determine the message to send that will maximize the expected profit, we can use the following formula:
+
+```{python}
+expected_profit_lr = [
+    "ep_control_lr", 
+    "ep_endurance_lr", 
+    "ep_backcountry_lr", 
+    "ep_racquet_lr", 
+    "ep_strength_lr", 
+    "ep_team_lr", 
+    "ep_water_lr"]
+```
+
+```{python}
+repl = {"ep_control_lr": "control", "ep_endurance_lr": "endurance", "ep_backcountry_lr": "backcountry", "ep_racquet_lr": "racquet", "ep_strength_lr": "strength", "ep_team_lr": "team", "ep_water_lr": "water"}
+pentathlon_nptb["ep_message_lr"] = (
+    pentathlon_nptb[expected_profit_lr]
+    .idxmax(axis=1)
+    .map(repl)
+)
+```
+
+To predict the order size, we use the `total_os` as the response variable and the other variables as predictors as well as the interaction between message and other variables. We then extend the prediction to the full database and see how the predictions are distributed.
+
+Same as the previous model, we use the `data_cmd` to predict the order size for different messages.
+
+After that, we calculate the expected profit for each product by multiplying the probability of purchasing and the order size for each product. We then choose the product with the highest expected profit using `idxmax` to automatically find the best message for each customer. This command also provides a label for the category with the maximum expected profit. Then, create `p_max` to store the maximum expected profit of purchasing for the best message sellected for each customer.
+
+#### 4.Report for each message, i.e., endurance, racket, etc., and no-message, the percentage of customers for whom that (no) message maximizes their expected profit.
+
+```{python}
+pentathlon_nptb.ep_message_lr.value_counts(normalize=True)
+```
+
+#### 5. Expected profit can we obtain, on average, per customer if we customize the message to each customer?
+
+```{python}
+pentathlon_nptb["ep_max"] = pentathlon_nptb[expected_profit_lr].max(axis=1)
+pentathlon_nptb["ep_max"].mean()
+```
+
+Let create the crosstab
+
+```{python}
+pd.crosstab(index=pentathlon_nptb[pentathlon_nptb.training == 0].ep_message_lr, columns="count").apply(rsm.format_nr)
+```
+
+#### 6. Expected profit per e-mailed customer if every customer receives the same message
+
+```{python}
+(
+    pentathlon_nptb
+    .loc[pentathlon_nptb.training == 0, ["ep_control_lr", "ep_endurance_lr", "ep_backcountry_lr", "ep_racquet_lr", "ep_strength_lr", "ep_team_lr", "ep_water_lr"]]
+    .agg("mean")
+    .sort_values(ascending=False)
+    .apply(rsm.format_nr, sym = "$", dec = 2)
+)
+```
+
+### 7. Expected profit per e-mailed customer if every customer is assigned randomly to one of the messages or the no-message condition?
+
+```{python}
+# probabilty of purchase where customer is assigned to a random message
+pentathlon_nptb["p_random_lr"] = lr_int.predict(pentathlon_nptb)["prediction"]
+
+# expected avg order size where customer is assigned to a random message
+pentathlon_nptb["ordersize_random_reg"] = reg.predict(pentathlon_nptb)["prediction"]
+
+# expected profit where customer is assigned to a random message
+pentathlon_nptb["ep_random_lr"] = pentathlon_nptb["p_random_lr"] * pentathlon_nptb["ordersize_random_reg"] * 0.4
+
+# expected profit per customer where customer is assigned to a random message
+random_profit_per_customer = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_random_lr"].mean()
+random_profit_per_customer
+```
+
+```{python}
+# expected profit where no-message is sent (control)
+pentathlon_nptb["ep_control_lr"]
+
+# expected profit per customer where no-message is sent (control)
+control_profit_per_customer = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_control_lr"].mean()
+control_profit_per_customer
+```
+
+#### 8. Profit for 5,000,000 customers
+
+```{python}
+# Profit where each customer is assigned to the message with the highest expected profit
+profit_logit = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_max"].agg("mean") * 5000000
+profit_logit
+```
+
+```{python}
+# Profit where each customer is sent to a random message
+random_profit = random_profit_per_customer * 5000000
+random_profit
+```
+
+```{python}
+# Profit where no message is sent
+control_profit = control_profit_per_customer * 5000000
+control_profit
+```
+
+```{python}
+profit_improvement_lr = profit_logit - control_profit
+profit_improvement_lr
+```
+
+```{python}
+profits_dct = {
+    "Customize Message": profit_logit,
+    "Randomly Assign": random_profit,
+    "No Message Sent": control_profit,
+}
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(profits_dct.items()), columns=['Model', 'Profit'])
+plt.figure(figsize=(10, 5))  # Adjust the width and height to your preference
+# Plot
+sns.set(style="white")
+ax = sns.barplot(x="Model", y="Profit", data=df, palette="magma")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.Profit, f'${row.Profit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Profit by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45)  # Rotate x labels for better readability
+plt.show()
+```
+
+## Neural Networks Model
+
+```{python}
+pentathlon_nptb[pentathlon_nptb["training"] == 1]
+```
+
+```{python}
+NN = rsm.model.mlp(
+    data={"pentathlon_nptb": pentathlon_nptb[pentathlon_nptb["training"] == 1]},
+    rvar='buyer_yes',
+    evar= evar,
+    hidden_layer_sizes=(1,),  # Simple NN with 1 hidden layer
+    mod_type='classification'
+)
+
+NN.summary()
+```
+
+```{python}
+NN100 = rsm.model.mlp(
+    data={"pentathlon_nptb": pentathlon_nptb[pentathlon_nptb["training"] == 1]},
+    rvar='buyer_yes',
+    evar= evar,
+    hidden_layer_sizes=(100,),  # more complex NN with 100 hidden layers
+    mod_type='classification'
+)
+
+NN100.summary()
+```
+
+#### Model Tuning
+
+```{python}
+# NN_cv = rsm.load_state("./data/NN_cv.pkl")['NN_cv']
+```
+
+After fine-tuning the model in a separate notebook, we preserved the model's state with save_state. To reintegrate it into the main notebook, load_state was utilized. However, due to GitHub's file evaluation constraints, we are unable to successfully pass the automated tests using the aforementioned code. Should you wish to review our tuned model, please refer to the auxiliary notebooks. You can replicate our steps there by employing the provided code above
+
+```{python}
+# NN_cv.best_params_
+```
+
+```{python}
+# NN_cv.best_score_.round(3)
+```
+
+```{python}
+NN_best = rsm.model.mlp(
+    data={"pentathlon_nptb": pentathlon_nptb[pentathlon_nptb["training"] == 1]},
+    rvar='buyer_yes',
+    evar= evar,
+    alpha = 0.01,
+    hidden_layer_sizes = (3, 3),
+    mod_type='classification'
+)
+
+NN_best.summary()
+```
+
+```{python}
+pentathlon_nptb['pred_NN'] = NN_best.predict(pentathlon_nptb)['prediction']
+```
+
+```{python}
+dct = {"train" : pentathlon_nptb.query("training == 1"), "test" : pentathlon_nptb.query("training == 0")}
+fig = rsm.gains_plot(dct, "buyer", "yes", "pred_NN")
+```
+
+```{python}
+from sklearn import metrics
+
+# prediction on training set
+pred = pentathlon_nptb.query("training == 1")['pred_NN']
+actual = pentathlon_nptb.query("training == 1")['buyer_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(5)
+```
+
+```{python}
+# prediction on test set
+pred = pentathlon_nptb.query("training == 0")['pred_NN']
+actual = pentathlon_nptb.query("training == 0")['buyer_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(5)
+```
+
+We can conclude that:
+
+The AUC for the training set is 0.890, which indicates that the model has a very good ability to distinguish between the two classes in the training data.
+
+The AUC for the test set is 0.888, which is nearly the same as the training AUC. This means that the model is generalizing well to new data and not overfitting to the training data. The small decrease from training to test is nearly negligible.
+
+### 1. Create predictions
+
+```{python}
+# Check for all unique message values in the dataset and count how many
+pentathlon_nptb["message"].value_counts()
+```
+
+```{python}
+# Create predictions for different scenarios where the message variable is set to specific values
+pentathlon_nptb["p_control_nn"] = NN_best.predict(pentathlon_nptb, data_cmd={"message": "control"})["prediction"]
+pentathlon_nptb["p_racquet_nn"] = NN_best.predict(pentathlon_nptb, data_cmd={"message": "racquet"})["prediction"]
+pentathlon_nptb["p_team_nn"] = NN_best.predict(pentathlon_nptb, data_cmd={"message": "team"})["prediction"]
+pentathlon_nptb["p_backcountry_nn"] = NN_best.predict(pentathlon_nptb, data_cmd={"message": "backcountry"})["prediction"]
+pentathlon_nptb["p_water_nn"] = NN_best.predict(pentathlon_nptb, data_cmd={"message": "water"})["prediction"]
+pentathlon_nptb["p_strength_nn"] = NN_best.predict(pentathlon_nptb, data_cmd={"message": "strength"})["prediction"]
+pentathlon_nptb["p_endurance_nn"] = NN_best.predict(pentathlon_nptb, data_cmd={"message": "endurance"})["prediction"]
+pentathlon_nptb
+```
+
+```{python}
+repl = {
+    "p_control_nn": "control", 
+    "p_endurance_nn": "endurance", 
+    "p_backcountry_nn": "backcountry", 
+    "p_racquet_nn": "racquet", 
+    "p_strength_nn": "strength", 
+    "p_team_nn": "team", 
+    "p_water_nn": "water"}
+```
+
+```{python}
+# extending the prediction to the full database to see distribution
+predictions_nn = [
+    "p_control_nn", 
+    "p_endurance_nn", 
+    "p_backcountry_nn", 
+    "p_racquet_nn", 
+    "p_strength_nn", 
+    "p_team_nn", 
+    "p_water_nn"]
+```
+
+```{python}
+# extending the prediction to the full database to see distribution
+pentathlon_nptb["message_nn"] = pentathlon_nptb[predictions_nn].idxmax(axis=1)
+pentathlon_nptb["message_nn"].value_counts()
+```
+
+```{python}
+# Find the maximum probability of purchase
+pentathlon_nptb["p_max_nn"] = pentathlon_nptb[predictions_nn].max(axis=1)
+```
+
+Approach: First of all, a neural network model was built to predict the next product to buy using buyer_yes as the response variable and the other variables as predictors. The model was trained using the training data and then used to predict the probability of purchasing for the test data. The model was then used to predict the probability of purchasing for the full database. To predict the probability of purchasing for different messages, we use the `data_cmd` to predict the probability of purchasing for different messages.
+
+Finally, we choose the product with the highest probability using `idxmax` to automatically find the best message for each customer. This command also provides a label for the category with the maximum predicted probability of buying across all the products. Then, `p_max` was created to store the maximum predicted probability of purchasing for the best message selected for each customer.
+
+#### 2. Percentage of customersfor whom that message or not message 
+
+```{python}
+# create a crosstab to see which products should we send to each customer.
+pd.crosstab(index=pentathlon_nptb[pentathlon_nptb.training == 0].message_nn, columns="count").apply(rsm.format_nr)
+```
+
+```{python}
+# percentage of customers for whom that message is the best message
+pentathlon_nptb["message_nn"].value_counts(normalize=True)
+```
+
+- `edurance`: The distribution suggests that `endurance`, related messages resonate significantly more with the customers than the other messages.
+
+- `team`: While not as dominant as `endurance`,  related messages also play an important role. There might be opportunities to further optimize or tailor these messages to increase their effectiveness.
+
+- Other categories such as `strength`, `racquet`, and `water`, have much smaller proportions, suggesting that they are less often the best choice for maximizing the probability of purchase.
+
+- `backcountry` was not included in the original dataset, so it is not surprising that it is not the best message for any customer.`
+
+```{python}
+# average purchase probability if we send the message for each product to everyone
+pentathlon_nptb.loc[pentathlon_nptb.training == 0, predictions_nn].agg("mean").sort_values(
+    ascending=False).apply(rsm.format_nr, perc=True)
+```
+
+#### 3. Expected profit
+
+```{python}
+# Calculate the avg order size/message
+ordersize = pentathlon_nptb[(pentathlon_nptb.training == 1) & (pentathlon_nptb.buyer_yes == 1)].groupby("message")["total_os"].mean()
+ordersize
+```
+
+```{python}
+NN_os = rsm.model.mlp(
+    data={"pentathlon_nptb": pentathlon_nptb[pentathlon_nptb["training"] == 1]},
+    rvar = "total_os",
+    evar = evar,
+    hidden_layer_sizes = (1,),  # Simple NN with 1 hidden layer
+    mod_type = 'regression'
+)
+NN_os.summary()
+```
+
+#### Model Tuning
+
+```{python}
+# NN_os = rsm.load_state("./data/NN_os.pkl")['NN_os']
+```
+
+Again, after fine-tuning the model in a separate notebook, we preserved the model's state with save_state. To reintegrate it into the main notebook, load_state was utilized. However, due to GitHub's file evaluation constraints, we are unable to successfully pass the automated tests using the aforementioned code. Should you wish to review our tuned model, please refer to the auxiliary notebooks. You can replicate our steps there by employing the provided code above
+
+```{python}
+# NN_os.best_params_
+```
+
+```{python}
+# NN_cv.best_score_.round(3)
+```
+
+```{python}
+NN_os_best = rsm.model.mlp(
+    data={"pentathlon_nptb": pentathlon_nptb[pentathlon_nptb["training"] == 1]},
+    rvar="total_os",
+    evar= evar,
+    alpha = 0.0001,
+    hidden_layer_sizes = (3, 3),
+    mod_type='regression'
+)
+
+NN_os_best.summary()
+```
+
+```{python}
+pentathlon_nptb["pos_control_nn"] = NN_os_best.predict(pentathlon_nptb, data_cmd={"message": "control"})["prediction"]
+pentathlon_nptb["pos_racquet_nn"] = NN_os_best.predict(pentathlon_nptb, data_cmd={"message": "racquet"})["prediction"]
+pentathlon_nptb["pos_team_nn"] = NN_os_best.predict(pentathlon_nptb, data_cmd={"message": "team"})["prediction"]
+pentathlon_nptb["pos_backcountry_nn"] = NN_os_best.predict(pentathlon_nptb, data_cmd={"message": "backcountry"})["prediction"]
+pentathlon_nptb["pos_water_nn"] = NN_os_best.predict(pentathlon_nptb, data_cmd={"message": "water"})["prediction"]
+pentathlon_nptb["pos_strength_nn"] = NN_os_best.predict(pentathlon_nptb, data_cmd={"message": "strength"})["prediction"]
+pentathlon_nptb["pos_endurance_nn"] = NN_os_best.predict(pentathlon_nptb, data_cmd={"message": "endurance"})["prediction"]
+```
+
+```{python}
+pentathlon_nptb["ep_control_nn"] = pentathlon_nptb["p_control_nn"] * pentathlon_nptb["pos_control_reg"] * 0.4
+pentathlon_nptb["ep_racquet_nn"] = pentathlon_nptb["p_racquet_nn"] * pentathlon_nptb["pos_racquet_reg"] * 0.4
+pentathlon_nptb["ep_team_nn"] = pentathlon_nptb["p_team_nn"] * pentathlon_nptb["pos_team_reg"] * 0.4
+pentathlon_nptb["ep_backcountry_nn"] = pentathlon_nptb["p_backcountry_nn"] * pentathlon_nptb["pos_backcountry_reg"] * 0.4
+pentathlon_nptb["ep_water_nn"] = pentathlon_nptb["p_water_nn"] * pentathlon_nptb["pos_water_reg"] * 0.4
+pentathlon_nptb["ep_strength_nn"] = pentathlon_nptb["p_strength_nn"] * pentathlon_nptb["pos_strength_reg"] * 0.4
+pentathlon_nptb["ep_endurance_nn"] = pentathlon_nptb["p_endurance_nn"] * pentathlon_nptb["pos_endurance_reg"] * 0.4
+```
+
+```{python}
+expected_profit_nn = [
+    "ep_control_nn", 
+    "ep_endurance_nn", 
+    "ep_backcountry_nn", 
+    "ep_racquet_nn", 
+    "ep_strength_nn", 
+    "ep_team_nn", 
+    "ep_water_nn"]
+```
+
+```{python}
+repl = {"ep_control_nn": "control", "ep_endurance_nn": "endurance", "ep_backcountry_nn": "backcountry", "ep_racquet_nn": "racquet", "ep_strength_nn": "strength", "ep_team_nn": "team", "ep_water_nn": "water"}
+pentathlon_nptb["ep_message_nn"] = (
+    pentathlon_nptb[expected_profit_nn]
+    .idxmax(axis=1)
+    .map(repl)
+)
+```
+
+### 4. Respective message maximizes expected profit
+
+```{python}
+pentathlon_nptb.ep_message_nn.value_counts(normalize=True)
+```
+
+The message that most customers respond the best to is `endurance` holding close to almost half of the customer. Messages such as `backcountry`, `racquet`, and `control` are not the best choice for nearly any customer. The remaining three messages, `team`, `strength`, and `water`, are the best choice for a small proportion of customers. 
+
+### 5. Expected profit/customer
+
+```{python}
+pentathlon_nptb["ep_max_nn"] = pentathlon_nptb[expected_profit_nn].max(axis=1)
+pentathlon_nptb["ep_max_nn"].mean()
+```
+
+```{python}
+pd.crosstab(index=pentathlon_nptb[pentathlon_nptb.training == 0].ep_message_nn, columns="count").apply(rsm.format_nr)
+```
+
+#### 6. Expected profit per e-mailed customer if every customer receives the same message
+
+```{python}
+(
+    pentathlon_nptb
+    .loc[pentathlon_nptb.training == 0, expected_profit_nn]
+    .agg("mean")
+    .sort_values(ascending=False)
+    .apply(rsm.format_nr, sym = "$", dec = 2)
+)
+```
+
+To no surprise, sending no message yields the lowest expected profit per customer. The message that maximizes the expected profit per customer are `endurance` and `strength` tied. The remaining messages of `team`, `water`, `backcountry` yield slightly less than `strength` and `endurance`. `Racquet` yields slightly more than sending no message but still less than the other messages.
+
+### 7. Expected profit per e-mailed customer if every customer is assigned randomly to one of the messages options
+
+```{python}
+# probabilty of purchase where customer is assigned to a random message
+pentathlon_nptb["p_random_nn"] = NN_best.predict(pentathlon_nptb)["prediction"]
+
+# expected avg order size where customer is assigned to a random message
+pentathlon_nptb["ordersize_random_nn"] = NN_os_best.predict(pentathlon_nptb)["prediction"]
+
+# expected profit where customer is assigned to a random message
+pentathlon_nptb["ep_random_nn"] = pentathlon_nptb["p_random_nn"] * pentathlon_nptb["ordersize_random_nn"] * 0.4
+
+# expected profit per customer where customer is assigned to a random message
+random_profit_per_customer = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_random_nn"].mean()
+random_profit_per_customer
+```
+
+```{python}
+# expected profit where no-message is sent (control)
+pentathlon_nptb["ep_control_nn"]
+
+# expected profit per customer where no-message is sent (control)
+control_profit_per_customer = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_control_nn"].mean()
+control_profit_per_customer
+```
+
+### 8. Expected profit for 5,000,000 customers
+
+```{python}
+# Profit where each customer is assigned to the message with the highest expected profit
+profit_nn = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_max_nn"].agg("mean") * 5000000
+profit_nn
+```
+
+```{python}
+# Profit where each customer is sent to a random message
+random_profit_nn = random_profit_per_customer * 5000000
+random_profit_nn
+```
+
+```{python}
+# Profit where no message is sent
+control_profit_nn = control_profit_per_customer * 5000000
+control_profit_nn
+```
+
+```{python}
+profit_improvement_nn = profit_nn - control_profit_nn
+profit_improvement_nn
+```
+
+```{python}
+profits_dct = {
+    "Customize Message": profit_nn,
+    "Randomly Assign": random_profit_nn,
+    "No Message Sent": control_profit_nn,
+}
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(profits_dct.items()), columns=['Model', 'Profit'])
+plt.figure(figsize=(10, 5))  
+# Plot
+sns.set(style="whitegrid")
+ax = sns.barplot(x="Model", y="Profit", data=df, palette="viridis")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.Profit, f'${row.Profit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Profit by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45) 
+plt.show()
+```
+
+## Random Forest Model
+
+### Train a Random Forest Model to predict the next product to buy
+
+```{python}
+rf = rsm.model.rforest(
+    data = {'NPTB': pentathlon_nptb.query("training == 1")},
+    rvar = 'buyer',
+    lev = 'yes',
+    evar = evar,
+)
+rf.summary()
+```
+
+We want to also use a random forest model to predict the next product to buy and see if we can create a robust NPTB model that accurately can predict which product a customer would purchase based on the messaging we send them. Above, we are training our base random forest model, and we will use this base random forest model to tune our hyperparameters, as seen below. 
+
+Some interesting key features of the output of this random forest model is the AUC value. In our base model, we see that the AUC is a 0.818. This is a decent value for AUC, with anything over 0.5 typically being considered a good model. 
+
+#### Random Forest Model Tuning
+
+```{python}
+#max_features = [None, 'auto', 'sqrt', 'log2', 0.25, 0.5, 0.75, 1.0]
+#n_estimators = [10, 50, 100, 200, 500, 1000]
+
+
+#param_grid = {"max_features": max_features, "n_estimators": n_estimators}
+#scoring = {"AUC": "roc_auc"}
+
+#rf_cv = GridSearchCV(rf.fitted, param_grid, scoring=scoring, cv=5, n_jobs=2, refit="AUC", verbose=5)
+```
+
+Below is the code for the grid search of a very large matrix. I would not recommend running this, as it takes a very long time to run. However, I have included the code for the grid search below. 
+
+```python
+rf_cv.fit(rf.data_onehot, rf.data.buyer_yes)
+
+```{python}
+#rf_cv.fit(rf_treatment.data_onehot, rf_treatment.data.buyer_yes)
+```
+
+Above, we conduct a grid search to identify which hyperparameters are best for our random forest model. However, when running a gridsearch this large, we ran into a computational cost issue that caused either our hyperparameter grid search to run for 4 hours, or caused the kernel to crash. Therefore, we conducted multiple step-wise grid searches where we limited the gridsearch matrix size, and went through the various iterations of combinations to see which parameters created the most robut model. Below, you can see the various rounds of model tuning. 
+
+#### Random Forest Model Tuning - Stepwise, limiting the grid search
+
+```{python}
+#max_features1 = ['sqrt']
+#n_estimators1 = [1000, 2000]
+
+
+#param_grid = {"max_features": max_features1, "n_estimators": n_estimators1}
+#scoring = {"AUC": "roc_auc"}
+
+#rf_cv_treatment1 = GridSearchCV(rf_treatment.fitted, param_grid, scoring=scoring, cv=4, n_jobs=2, refit="AUC", verbose=5)
+```
+
+Because our random forest model took over 4 hours to run previously, we decided to limit the grid search to 9 iterations. Our goal is to create a balance between exploring the hyperparameter space and keeping the computational cost reasonable.
+
+```{python}
+#rf_cv_treatment1.fit(rf_treatment.data_onehot, rf_treatment.data.buyer_yes)
+```
+
+```{python}
+#rf_cv_treatment1.best_params_
+```
+
+As seen above, the grid search identified that the best parameters were as follows:
+- max_features: 'sqrt'
+- n_estimators: 1000
+
+
+When we run our random forest model with the best parameters identified from the grid search, the AUC score is approximately 0.862. 
+
+```{python}
+rf_tuned = rsm.model.rforest(
+    data = {'NPTB': pentathlon_nptb.query("training == 1")},
+    rvar = 'buyer',
+    lev = 'yes',
+    evar = evar,
+    n_estimators = 1000,
+    max_features = 'sqrt'
+)
+rf_tuned.summary()
+```
+
+```{python}
+pentathlon_nptb['pred_rf'] = rf_tuned.predict(pentathlon_nptb)['prediction']
+pentathlon_nptb['pred_rf'].mean()
+```
+
+```{python}
+dct_rf = {"train_rf": pentathlon_nptb.query("training == 1"), "test_rf": pentathlon_nptb.query("training == 0")}
+fig = rsm.gains_plot(dct_rf, "buyer", "yes", "pred_rf")
+```
+
+The gains chart above is a visual representation of the AUC score. The gains chart shows the percentage of the total number of cases in a given category that are captured by the model. Based on the steep rise at the beginning of the curve, indicates that the model is effective at ranking the positive events, i.e.. buyers, higher than the negative ones. The more steep the initial part of the curve, the better the model is at identifying the positive events early on when you start targeting the population based on the model’s scores.
+
+In this specific chart, the model seems to perform fairly well, particularly because the initial sections of both curves are quite steep, indicating that a significant percentage of the positive events can be captured by targeting a relatively small percentage of the population. 
+
+```{python}
+from sklearn import metrics
+```
+
+```{python}
+def apply_rand_message(data, pred_col, message_col):
+    np.random.seed(1234)
+    data["random_number"] = np.random.randint(2, size = len(data))
+    data["random_message"] = rsm.ifelse(data["random_number"] == 1, data[message_col], "no message")
+    data["random_pred"] = rsm.ifelse(data["random_number"] == 1, data[pred_col], 0)
+    return data
+```
+
+```{python}
+# prediction on training data
+pred_rf = pentathlon_nptb.query("training == 1")["pred_rf"]
+actual_rf = pentathlon_nptb.query("training == 1")["buyer_yes"]
+fpr, tpr, thresholds = metrics.roc_curve(actual_rf, pred_rf)
+metrics.auc(fpr, tpr).round(3)
+```
+
+```{python}
+# prediction on test data
+pred_rf = pentathlon_nptb.query("training == 0")["pred_rf"]
+actual_rf = pentathlon_nptb.query("training == 0")["buyer_yes"]
+fpr, tpr, thresholds = metrics.roc_curve(actual_rf, pred_rf)
+metrics.auc(fpr, tpr).round(3)
+```
+
+Based on the Gains Chart, and the AUC values for the test and training set, we can conclude that the model is performing decently well. Because of the perfect AUC score on the training data, there is a slight hesitation that the model may be overfitting. However, the AUC score on the test data is still quite high, indicating that the model is generalizing well.
+
+The AUC for the training set is 1, which indicates that the model has a very good ability to distinguish between the two classes in the training data. This is also supported by the steep increase in the first part of the gains chart in the training data. The AUC for the test set is 0.865, which is slightly lower but still indicates a very good predictive performance on unseen data.
+
+#### 1. Create prediction for each product
+
+```{python}
+pentathlon_nptb['p_control_rf'] = rf_tuned.predict(pentathlon_nptb, data_cmd={"message": "control"})["prediction"]
+pentathlon_nptb['p_racquet_rf'] = rf_tuned.predict(pentathlon_nptb, data_cmd={"message": "racquet"})["prediction"]
+pentathlon_nptb['p_team_rf'] = rf_tuned.predict(pentathlon_nptb, data_cmd={"message": "team"})["prediction"]
+pentathlon_nptb['p_backcountry_rf'] = rf_tuned.predict(pentathlon_nptb, data_cmd={"message": "backcountry"})["prediction"]
+pentathlon_nptb['p_water_rf'] = rf_tuned.predict(pentathlon_nptb, data_cmd={"message": "water"})["prediction"]
+pentathlon_nptb['p_strength_rf'] = rf_tuned.predict(pentathlon_nptb, data_cmd={"message": "strength"})["prediction"]
+pentathlon_nptb['p_endurance_rf'] = rf_tuned.predict(pentathlon_nptb, data_cmd={"message": "endurance"})["prediction"]
+```
+
+```{python}
+pentathlon_nptb
+```
+
+To identify which message will lead to the highest probability of purchase, we will use our random forest model to extrapolate predictions to the full database. 
+
+```{python}
+repl = {
+    "p_control_rf": "control", 
+    "p_endurance_rf": "endurance", 
+    "p_backcountry_rf": "backcountry", 
+    "p_racquet_rf": "racquet", 
+    "p_strength_rf": "strength", 
+    "p_team_rf": "team", 
+    "p_water_rf": "water"}
+```
+
+```{python}
+predictions_rf = [
+    "p_control_rf", 
+    "p_endurance_rf", 
+    "p_backcountry_rf", 
+    "p_racquet_rf", 
+    "p_strength_rf", 
+    "p_team_rf", 
+    "p_water_rf"]
+```
+
+```{python}
+pentathlon_nptb['message_rf'] = (
+    pentathlon_nptb[predictions_rf]
+    .idxmax(axis=1)
+    .map(repl)
+)
+```
+
+The code above is creating a new column in our Pentathlon_NPTB database, called `message_rf` which identifies which of the predicted messages has the highest probability, and then filling in the `message_rf` column with the name of the message that has the highest probability.
+
+```{python}
+#plot the distribution of message_rf column
+pentathlon_nptb['message_rf'].value_counts().plot(kind='bar', title = 'Distribution of message_rf')
+```
+
+```{python}
+pentathlon_nptb['p_max_rf'] = pentathlon_nptb[predictions_rf].max(axis=1)
+```
+
+**Approach** <br>
+Our approach to creating the targeting messaging is building a random forest model to predict the next product the customer will buy based on a variety of customer features. We will use buyer_yes as the response variable and the other variables as predictors. 
+
+We use our random forest model to extend the prediction to the full database. To predict the probability of purchasing for different messages, we use the `data_cmd` to predict the probability of purchasing for different messages.
+
+Finally, we select the product with the highest probability using `idxmax`. This command also provides a label for the category with the maximum predicted probability of buying across all the products. Then, create `p_max` to store the maximum predicted probability of purchasing an item based on the messaging sent to said customer.
+
+### 2. Percentage of customers to message and not to message
+
+```{python}
+pd.crosstab(index=pentathlon_nptb[pentathlon_nptb.training == 0].message_rf, columns="count").apply(rsm.format_nr)
+```
+
+```{python}
+pentathlon_nptb['message_rf'].value_counts(normalize=True)
+```
+
+- `control`: The distribution suggests that the `control_rf` control messaging seems to resonate more with the customers than the other messages based on this model.
+
+- `endurance`, `strength`: the `endurance` and `strength` messages are approximately similar in their values. There might be opportunities to further optimize or tailor these messages to increase their effectiveness.
+
+- `backcountry`, `racquet`, `water`, `team`, all have roughly the same proportion of customers to message at around 10%. This suggests that these messages are not as effective as the `control` and `endurance` messages.
+
+```{python}
+pentathlon_nptb['message_rf'].value_counts(normalize=True).plot(kind='bar', title='Message Distribution')
+```
+
+```{python}
+pentathlon_nptb.loc[pentathlon_nptb.training == 0, predictions_rf].agg("mean").sort_values(
+    ascending=False).apply(rsm.format_nr, perc=True)
+```
+
+Above is a table with the average purchase probability if we send the message for each product to everyone. Even though we are sending much more control messages compared to the other categories, we see that this does not lead to an increase in the probability of purchase. This is an interesting insight, and we should consider other ways to optimize our messaging strategy to increase the number of messages sent to those in the `endurance` and `strength` categories.
+
+### 3. Expected profit
+
+```{python}
+#Average Ordersize per message
+ordersize = pentathlon_nptb[(pentathlon_nptb.training == 1) & (pentathlon_nptb.buyer_yes == 1)].groupby("message_rf")["total_os"].mean()
+ordersize
+```
+
+#### Create another random forest model to Predict the Ordersize
+
+```{python}
+rf_os = rsm.model.rforest(
+    data = {"pentathlon_nptb": pentathlon_nptb[(pentathlon_nptb.training == 1) & (pentathlon_nptb.buyer == "yes")]},
+    rvar ="total_os",
+    evar = evar,
+    n_estimators = 200,
+    max_features = 'sqrt'
+)
+rf_os.summary()
+```
+
+```{python}
+pentathlon_nptb['pos_control_rf'] = rf_os.predict(pentathlon_nptb, data_cmd={"message": "control"})["prediction"]
+pentathlon_nptb['pos_racquet_rf'] = rf_os.predict(pentathlon_nptb, data_cmd={"message": "racquet"})["prediction"]
+pentathlon_nptb['pos_team_rf'] = rf_os.predict(pentathlon_nptb, data_cmd={"message": "team"})["prediction"]
+pentathlon_nptb['pos_backcountry_rf'] = rf_os.predict(pentathlon_nptb, data_cmd={"message": "backcountry"})["prediction"]
+pentathlon_nptb['pos_water_rf'] = rf_os.predict(pentathlon_nptb, data_cmd={"message": "water"})["prediction"]
+pentathlon_nptb['pos_strength_rf'] = rf_os.predict(pentathlon_nptb, data_cmd={"message": "strength"})["prediction"]
+pentathlon_nptb['pos_endurance_rf'] = rf_os.predict(pentathlon_nptb, data_cmd={"message": "endurance"})["prediction"]
+```
+
+#### Calculating the expected profit for each product
+
+```{python}
+pentathlon_nptb['ep_control_rf'] = pentathlon_nptb['p_control_rf'] * pentathlon_nptb['pos_control_reg'] * 0.4
+pentathlon_nptb['ep_racquet_rf'] = pentathlon_nptb['p_racquet_rf'] * pentathlon_nptb['pos_racquet_reg'] * 0.4
+pentathlon_nptb['ep_team_rf'] = pentathlon_nptb['p_team_rf'] * pentathlon_nptb['pos_team_reg'] * 0.4
+pentathlon_nptb['ep_backcountry_rf'] = pentathlon_nptb['p_backcountry_rf'] * pentathlon_nptb['pos_backcountry_reg'] * 0.4
+pentathlon_nptb['ep_water_rf'] = pentathlon_nptb['p_water_rf'] * pentathlon_nptb['pos_water_reg'] * 0.4
+pentathlon_nptb['ep_strength_rf'] = pentathlon_nptb['p_strength_rf'] * pentathlon_nptb['pos_strength_reg'] * 0.4
+pentathlon_nptb['ep_endurance_rf'] = pentathlon_nptb['p_endurance_rf'] * pentathlon_nptb['pos_endurance_reg'] * 0.4
+```
+
+```{python}
+expected_profit_rf = [
+    "ep_control_rf", 
+    "ep_endurance_rf", 
+    "ep_backcountry_rf", 
+    "ep_racquet_rf", 
+    "ep_strength_rf", 
+    "ep_team_rf", 
+    "ep_water_rf"]
+```
+
+```{python}
+repl = {"ep_control_rf": "control", "ep_endurance_rf": "endurance", "ep_backcountry_rf": "backcountry", "ep_racquet_rf": "racquet", "ep_strength_rf": "strength", "ep_team_rf": "team", "ep_water_rf": "water"}
+pentathlon_nptb["ep_message_rf"] = (
+    pentathlon_nptb[expected_profit_rf]
+    .idxmax(axis=1)
+    .map(repl)
+)
+pentathlon_nptb['ep_message_rf'].value_counts()
+```
+
+##### 4. Percentage of customer for whom no message maximizes their expected profits
+
+```{python}
+pentathlon_nptb.ep_message_rf.value_counts(normalize=True)
+```
+
+#### 5. Expected profit per email if we customize the message to each customers
+
+```{python}
+pentathlon_nptb["ep_max_rf"] = pentathlon_nptb[expected_profit_rf].max(axis=1)
+pentathlon_nptb["ep_max_rf"].mean()
+```
+
+```{python}
+pd.crosstab(index=pentathlon_nptb[pentathlon_nptb.training == 0].ep_message_rf, columns="count").apply(rsm.format_nr)
+```
+
+#### 6.  Expected profit per e-mailed customer if every customer receives the same message
+
+```{python}
+(
+    pentathlon_nptb
+    .loc[pentathlon_nptb.training == 0, expected_profit_rf]
+    .agg("mean")
+    .sort_values(ascending=False)
+    .apply(rsm.format_nr, sym = "$", dec = 2)
+)
+```
+
+### 7. Expected profit per e-mailed customer if every customer is assigned randomly to one of the messages or the no-message condition
+
+```{python}
+# probabilty of purchase where customer is assigned to a random message
+pentathlon_nptb["p_random_rf"] = rf.predict(pentathlon_nptb)["prediction"]
+
+# expected avg order size where customer is assigned to a random message
+pentathlon_nptb["ordersize_random_reg"] = reg.predict(pentathlon_nptb)["prediction"]
+
+# expected profit when customer is assigned to a random message
+pentathlon_nptb["ep_random_rf"] = pentathlon_nptb["p_random_rf"] * pentathlon_nptb["ordersize_random_reg"] * 0.4
+
+# expected profit/customer when a customer is assigned to a random message
+random_profit_per_customer_rf = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_random_rf"].mean()
+random_profit_per_customer_rf
+```
+
+```{python}
+# expected profit where no-message is sent (control)
+pentathlon_nptb["ep_control_rf"]
+
+# expected profit per customer where no-message is sent (control)
+control_profit_per_customer_rf = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_control_rf"].mean()
+control_profit_per_customer_rf
+```
+
+#### 8. Profit for 5,000,000 customers
+
+```{python}
+profit_rf = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_max_rf"].agg("mean") * 5000000
+profit_rf
+```
+
+```{python}
+# Profit when a customer is sent a random message
+random_profit_rf = random_profit_per_customer_rf * 5000000
+random_profit_rf
+
+# Profit when there is no message sent
+control_profit_rf = control_profit_per_customer_rf * 5000000
+control_profit_rf
+```
+
+```{python}
+profit_improvement_rf = profit_rf - control_profit_rf
+profit_improvement_rf
+```
+
+```{python}
+profits_dct_rf = {
+    "Customize Message": profit_rf,
+    "Randomly Assign": random_profit_rf,
+    "No Message Sent": control_profit_rf,
+}
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(profits_dct_rf.items()), columns=['Model', 'Profit'])
+plt.figure(figsize=(10, 5))  # Adjust the width and height to your preference
+# Plot
+sns.set(style="white")
+ax = sns.barplot(x="Model", y="Profit", data=df, palette="coolwarm")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.Profit, f'${row.Profit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Profit by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45)  # Rotate x labels for better readability
+plt.show()
+```
+
+## XGBoost Model
+
+```{python}
+rvar = "buyer_yes"
+
+evar = pentathlon_nptb.columns.to_list()
+evar = evar[evar.index("message"):] # all columns after "message"
+evar = evar[:evar.index("freq_racquet")+1] # all columns before "freq_racquet"
+evar
+```
+
+```{python}
+# Create X_train, X_test, y_train, y_test using "training" column
+X_train = pentathlon_nptb.loc[pentathlon_nptb['training'] == 1, evar]
+X_test = pentathlon_nptb.loc[pentathlon_nptb['training'] == 0, evar]
+y_train = pentathlon_nptb.loc[pentathlon_nptb['training'] == 1, rvar]
+y_test = pentathlon_nptb.loc[pentathlon_nptb['training'] == 0, rvar]
+```
+
+```{python}
+from sklearn.model_selection import GridSearchCV
+from xgboost import XGBClassifier
+
+
+# Define the parameter grid to be used in RandomizedSearchCV
+param_grid = {
+    'learning_rate': [0.1,0.01,0.001],  
+    'n_estimators': [100],
+    'max_depth': [3, 6 ,10 ] # Depths from 3 to 10
+}
+```
+
+```{python}
+# Initialize the XGBClassifier
+xgb = XGBClassifier(use_label_encoder=False, eval_metric='logloss',enable_categorical = True)
+```
+
+```{python}
+# Initialize GridSearchCV
+xgb_tuned = GridSearchCV(estimator=xgb, param_grid= param_grid, scoring='roc_auc', cv=5, verbose=5)
+```
+
+```{python}
+# Fit the model
+xgb_tuned.fit(X_train, y_train)
+```
+
+```{python}
+# print best parameters
+best_params = xgb_tuned.best_params_
+print(best_params)
+
+# print best score
+best_score = xgb_tuned.best_score_
+print(best_score)
+```
+
+```{python}
+# Train model on best parameters
+best_xgb = XGBClassifier(**best_params, use_label_encoder=False, eval_metric="logloss", enable_categorical=True)
+
+# Fit new model to training data
+best_xgb.fit(X_train, y_train)
+```
+
+```{python}
+# Feature importance of xgb model
+from xgboost import plot_importance
+import matplotlib.pyplot as plt
+
+# Assuming best_xgb is your trained XGBoost model
+
+# Plot feature importance
+plot_importance(best_xgb, importance_type='weight')
+plt.show()
+```
+
+## Questions
+### 1.  For  each  customer  determine  the  message  (i.e.,  endurance,  strength,  water,  team, backcountry,  racquet,  or  no-message)  predicted  to  lead  to  the  highest  probability  of purchase.
+
+To determine the message that will lead to the highest probability of purchase for each customer, we can fit the model using only the data for each categorical level in our model and use the fitted model to create predictions for all of the data. Once we have predictions on all of the data for each message, we can select the message with the highest predicted value for the record.
+
+```{python}
+# Create a training copy of the data where 'training' equals 1
+pentathlon_nptb_train = pentathlon_nptb[pentathlon_nptb['training'] == 1].copy()
+
+# Define the 7 different "message" values
+message_values = ['team', 'backcountry', 'endurance', 'water', 'racquet', 'strength', 'control']
+
+for value in message_values:
+    # Filter the training set for the current message
+    current_train = pentathlon_nptb_train[pentathlon_nptb_train['message'] == value]
+    
+    # Create X_train and y_train for the current message
+    X_train = current_train[evar]
+    y_train = current_train[rvar]
+    
+    # Fit the model to the training data for the current message
+    best_xgb.fit(X_train, y_train)
+    
+    # Predict probabilities for the entire dataset (you may want to adjust this based on your requirements)
+    pentathlon_nptb[f'p_{value}_xgb'] = best_xgb.predict_proba(pentathlon_nptb[evar])[:, 1]
+
+```
+
+```{python}
+repl = {
+    "p_control_xgb": "control", 
+    "p_endurance_xgb": "endurance", 
+    "p_backcountry_xgb": "backcountry", 
+    "p_racquet_xgb": "racquet", 
+    "p_strength_xgb": "strength", 
+    "p_team_xgb": "team", 
+    "p_water_xgb": "water"}
+```
+
+```{python}
+predictions_xgb = [
+    "p_control_xgb", 
+    "p_endurance_xgb", 
+    "p_backcountry_xgb", 
+    "p_racquet_xgb", 
+    "p_strength_xgb", 
+    "p_team_xgb", 
+    "p_water_xgb"]
+```
+
+```{python}
+pentathlon_nptb['message_xgb'] = (
+    pentathlon_nptb[predictions_xgb]
+    .idxmax(axis=1)
+    .map(repl)
+)
+```
+
+```{python}
+pd.crosstab(index=pentathlon_nptb.message_xgb, columns="count").apply(rsm.format_nr).sort_values("count", ascending=True)
+```
+
+### 2. For each message, The percentage of customers for whom that message or no-message  maximizes  their  probability  of  purchase:
+
+We can see from the plot that endurance messages most often maximizes the cusomer's probability of purchase. After enducance, strength messages are the second most reported value that maximizes purchase probabilities. Surprisingly, despite team, raquet, and water being the next best message groups, none of the remaining messages seem to provide a meaningful improvement over sending no message at all.
+
+```{python}
+message_percentages= pentathlon_nptb['message_xgb'].value_counts(normalize=True)
+message_percentages
+```
+
+```{python}
+# Plotting
+plt.figure(figsize=(10, 6))
+message_percentages.plot(kind='bar')
+plt.ylabel('Percentage of Customers')
+plt.xlabel('Message Type')
+plt.title('Percentage of Customers for Each Message Value')
+plt.xticks(rotation=45)  # Rotate labels to make them readable
+plt.show()
+```
+
+### For  each  customer,  determine  the  message  (i.e.,  endurance,  strength,  water,  team, backcountry, racquet, or no-message) predicted to lead to the highest expected profit (COGS is 60%). 
+
+The message returning the highest profit is `Endurance`
+
+To predict order size we tuned a new xgb model to the data and regressed the likely order size for each record. We then used the predicted order size to calculate the expected profit for each record. We calculated the expected profit by multiplying the predicted order size by the probability of purchase and subtracting the cost of goods sold from the result.
+
+```{python}
+rvar_os = "total_os"
+evar = ['message',
+ 'age',
+ 'female',
+ 'income',
+ 'education',
+ 'children',
+ 'freq_endurance',
+ 'freq_strength',
+ 'freq_water',
+ 'freq_team',
+ 'freq_backcountry',
+ 'freq_racquet']
+```
+
+```{python}
+# Create X_train, X_test, y_train, y_test using "training" column
+X_train = pentathlon_nptb.loc[pentathlon_nptb['training'] == 1, evar]
+X_test = pentathlon_nptb.loc[pentathlon_nptb['training'] == 0, evar]
+y_train_os = pentathlon_nptb.loc[pentathlon_nptb['training'] == 1, 'total_os']
+y_test_os = pentathlon_nptb.loc[pentathlon_nptb['training'] == 0, 'total_os']
+```
+
+```{python}
+from xgboost import XGBRegressor
+
+# Define the parameter grid to be used in GridSearchCV
+param_grid = {
+    'learning_rate': [0.1, 0.01, 0.001],  
+    'n_estimators': [100],
+    'max_depth': [3, 6, 10]  # Depths from 3 to 10
+}
+
+# Initialize the XGBRegressor
+xgb_os = XGBRegressor(use_label_encoder=False, eval_metric='rmse', enable_categorical=True)
+
+# Initialize GridSearchCV with a scoring metric suitable for regression
+xgb_tuned_os = GridSearchCV(estimator=xgb_os, param_grid=param_grid, scoring='neg_root_mean_squared_error', cv=5, verbose=5)
+
+# Assuming X_train and y_train are defined
+# Fit the model
+xgb_tuned_os.fit(X_train, y_train_os)
+
+```
+
+```{python}
+# After fitting, get the best parameters and retrain the model
+best_params_os = xgb_tuned.best_params_
+best_xgb_os = XGBRegressor(**best_params_os, use_label_encoder=False, eval_metric="rmse", enable_categorical=True)
+
+# Fit the new model to training data
+best_xgb_os.fit(X_train, y_train_os)
+```
+
+```{python}
+# Create a training copy of the data where 'training' equals 1
+pentathlon_nptb_train = pentathlon_nptb[pentathlon_nptb['training'] == 1].copy()
+
+# Define the 7 different "message" values
+message_values = ['team', 'backcountry', 'endurance', 'water', 'racquet', 'strength', 'control']
+
+for value in message_values:
+    # Filter the training set for the current message
+    current_train = pentathlon_nptb_train[pentathlon_nptb_train['message'] == value]
+    
+    # Create X_train and y_train for the current message
+    X_train = current_train[evar]
+    y_train = current_train[rvar_os]
+    
+    # Fit the model to the training data for the current message
+    best_xgb_os.fit(X_train, y_train)
+    
+    # Predict orer size for the entire dataset
+    pentathlon_nptb[f'os_{value}_xgb'] = best_xgb_os.predict(pentathlon_nptb[evar]).round(0)
+```
+
+```{python}
+values = ['team', 'backcountry', 'endurance', 'water', 'racquet', 'strength', 'control']
+Profit_margin = 1-0.6
+
+
+for value in values:
+    pentathlon_nptb[f'ep_{value}_xgb'] = pentathlon_nptb[f'p_{value}_xgb'] * pentathlon_nptb[f'os_{value}_xgb'] * Profit_margin
+```
+
+```{python}
+expected_profit_xgb = [
+    "ep_control_xgb", 
+    "ep_endurance_xgb", 
+    "ep_backcountry_xgb", 
+    "ep_racquet_xgb", 
+    "ep_strength_xgb", 
+    "ep_team_xgb", 
+    "ep_water_xgb"]
+```
+
+```{python}
+repl = {"ep_control_xgb": "control", "ep_endurance_xgb": "endurance", "ep_backcountry_xgb": "backcountry", "ep_racquet_xgb": "racquet", "ep_strength_xgb": "strength", "ep_team_xgb": "team", "ep_water_xgb": "water"}
+pentathlon_nptb["ep_message_xgb"] = (
+    pentathlon_nptb[expected_profit_xgb]
+    .idxmax(axis=1)
+    .map(repl)
+)
+```
+
+```{python}
+# Define a function to look up the profit value based on ep_message_xgb
+def get_ep(row):
+    # Mapping each ep_message_xgb value to the corresponding profit column
+    mapping = {
+        'control': 'ep_control_xgb',
+        'endurance': 'ep_endurance_xgb',
+        'backcountry': 'ep_backcountry_xgb',
+        'racquet': 'ep_racquet_xgb',
+        'strength': 'ep_strength_xgb',
+        'team': 'ep_team_xgb',
+        'water': 'ep_water_xgb',
+    }
+    
+    # Get the profit column name for the current row's message
+    profit_col = mapping.get(row['ep_message_xgb'])
+    
+    # Return the value from the corresponding profit column for this row
+    if profit_col:
+        return row[profit_col]
+    else:
+        return None
+
+# Apply the function to each row to create a new column with the corresponding profit value
+pentathlon_nptb['ep_message_max_p'] = pentathlon_nptb.apply(get_ep, axis=1)
+```
+
+```{python}
+ep_profit = pentathlon_nptb.groupby('ep_message_xgb')['ep_message_max_p'].sum().sort_values(ascending=False).round(2)
+ep_profit
+```
+
+```{python}
+# Histogram of ep_profit
+plt.figure(figsize=(10, 6))
+ep_profit.plot(kind='bar')
+plt.ylabel('Expected Profit by Message')
+plt.xlabel('Message Type')
+plt.title('Total Profit')
+plt.xticks(rotation=45)  # Rotate labels to make them readable
+plt.show()
+```
+
+### 4. Report for each message, i.e., endurance, racket, etc., and no-message, the percentage  of customers for whom that (no) message maximizes their expected profit.
+
+
+```{python}
+Message_max = pentathlon_nptb.ep_message_xgb.value_counts(normalize=True)
+Message_max
+```
+
+```{python}
+# Plotting
+plt.figure(figsize=(10, 6))
+Message_max.plot(kind='bar')
+plt.ylabel('Percentage of Customers')
+plt.xlabel('Message Type')
+plt.title('Percentage of Customers for Each Message Value')
+plt.xticks(rotation=45)  # Rotate labels to make them readable
+
+plt.show()
+```
+
+### 5. The expected  profit  can  we  obtain,  on  average,  per  customer  if  we  customize  the message to each customer
+
+```{python}
+avg_profit_pc = pentathlon_nptb[pentathlon_nptb.training == 0].groupby('ep_message_xgb')['ep_message_max_p'].mean().sort_values(ascending=False).round(2) * Profit_margin
+avg_profit_pc
+```
+
+```{python}
+# Histogram of ep_profit
+plt.figure(figsize=(10, 6))
+avg_profit_pc.plot(kind='bar')
+plt.ylabel('Expected Profit Per Customer')
+plt.xlabel('Message Type')
+plt.title('Average Profit')
+plt.xticks(rotation=45)  # Rotate labels to make them readable
+plt.show()
+```
+
+### 6. The expected profit per e-mailed customer if every customer receives the same message 
+ 
+
+```{python}
+expected_profit_xgb = [
+    "ep_control_xgb", 
+    "ep_endurance_xgb", 
+    "ep_backcountry_xgb", 
+    "ep_racquet_xgb", 
+    "ep_strength_xgb", 
+    "ep_team_xgb", 
+    "ep_water_xgb"]
+
+# Expected profit per customer for each message
+epp_same_message = pentathlon_nptb[pentathlon_nptb.training == 0][expected_profit_xgb].mean().sort_values(ascending=False) * Profit_margin
+```
+
+```{python}
+# Histogram of ep_profit
+plt.figure(figsize=(10, 6))
+epp_same_message.plot(kind='bar')
+plt.ylabel('Expected Profit Per Customer')
+plt.xlabel('Message Type')
+plt.title('Average Profit')
+plt.xticks(rotation=45)  # Rotate labels to make them readable
+plt.show()
+```
+
+### 7. The expected profit per e-mailed customer if every customer is assigned randomly to one of the messages or the no-message condition 
+
+```{python}
+pentathlon_nptb['ep_random_xgb'] = best_xgb.predict_proba(pentathlon_nptb[evar])[:, 1]
+xgb_random_ppc = pentathlon_nptb[pentathlon_nptb.training == 0]['ep_random_xgb'].mean() * Profit_margin
+xgb_random_ppc
+```
+
+```{python}
+expected_profit_xgb = [
+    "ep_control_xgb", 
+    "ep_endurance_xgb", 
+    "ep_backcountry_xgb", 
+    "ep_racquet_xgb", 
+    "ep_strength_xgb", 
+    "ep_team_xgb", 
+    "ep_water_xgb",
+    "ep_random_xgb"]
+
+# Expected profit per customer for each message
+epp_same_message = pentathlon_nptb[pentathlon_nptb.training == 0][expected_profit_xgb].mean().sort_values(ascending=False)
+```
+
+```{python}
+# Histogram of ep_profit
+plt.figure(figsize=(10, 6))
+epp_same_message.plot(kind='bar')
+plt.ylabel('Expected Profit Per Customer')
+plt.xlabel('Message Type')
+plt.title('Average Profit')
+plt.xticks(rotation=45)  # Rotate labels to make them readable
+plt.show()
+```
+
+### 8. For the typical promotional e-mail blast to 5,000,000 customers, The improvement (in percent and in total Euros) could Pentathlon achieve by customizing the message (or no-message) to each customer:
+
+```{python}
+pentathlon_nptb["ep_max_xgb"] = pentathlon_nptb[expected_profit_xgb].max(axis=1)
+pentathlon_nptb["ep_max_xgb"].mean()
+```
+
+```{python}
+
+# Profit where each customer is assigned to the message with the highest expected profit
+profit_xgb = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_max_xgb"].agg("mean") * 5000000
+profit_xgb 
+```
+
+```{python}
+# Profit where each customer is sent to a random message
+random_profit_xgb = xgb_random_ppc * 5000000
+random_profit_xgb
+```
+
+```{python}
+# expected profit where no-message is sent (control)
+pentathlon_nptb["ep_control_xgb"]
+
+# expected profit per customer where no-message is sent (control)
+control_profit_per_customer = pentathlon_nptb.loc[pentathlon_nptb.training == 0, "ep_control_xgb"].mean()
+control_profit_per_customer
+```
+
+```{python}
+# Profit where no message is sent
+control_profit_xgb = control_profit_per_customer * 5000000
+control_profit_xgb
+```
+
+```{python}
+profit_improvement_xgb = profit_xgb - control_profit_xgb
+profit_improvement_xgb
+```
+
+```{python}
+profits_dct = {
+    "Customize Message": profit_xgb,
+    "No Message Sent": control_profit_nn,
+    "Randomly Assign": random_profit_xgb,
+    
+}
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(profits_dct.items()), columns=['Model', 'Profit'])
+plt.figure(figsize=(10, 5))  
+# Plot
+sns.set(style="whitegrid")
+ax = sns.barplot(x="Model", y="Profit", data=df, palette="viridis")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.Profit, f'${row.Profit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Profit by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45) 
+plt.show()
+```
+
+## Improvement Profit for 4 models
+
+```{python}
+mod_perf = pd.DataFrame({
+    "model": ["logit", "nn", "rf", "xgb"],
+    "profit": [profit_improvement_lr, profit_improvement_nn, profit_improvement_rf, profit_improvement_xgb]
+})
+mod_perf
+```
+
+```{python}
+profits_dct = {
+    "Logit": profit_improvement_lr,
+    "Neural Network": profit_improvement_nn,
+    "Random Forest" : profit_improvement_rf,
+    "XGBoost": profit_improvement_xgb
+    
+}
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Convert dictionary to DataFrame
+df = pd.DataFrame(list(profits_dct.items()), columns=['Model', 'Profit'])
+plt.figure(figsize=(10, 5))  
+# Plot
+sns.set(style="whitegrid")
+ax = sns.barplot(x="Model", y="Profit", data=df, palette="viridis")
+
+# Annotations
+for index, row in df.iterrows():
+    ax.text(index, row.Profit, f'${row.Profit:.2f}', ha='center')
+
+# Set labels and title
+ax.set_xlabel("Model Type", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_ylabel("Profit", fontdict={'family': 'serif', 'color': 'black', 'size': 12})
+ax.set_title("Profit Improvement by Model", fontdict={'family': 'serif', 'color': 'black', 'size': 15})
+
+plt.xticks(rotation=45) 
+plt.show()
+```
+
+According to the chart, Random Forest outperforms the other models in terms of profit improvement but takes more than 2 hours to tune the model.
+
+- Weaknesses of the Random Forest Model:
+
+Computational Complexity: Random Forest can be computationally intensive, especially as the number of trees and the depth of each tree increase. This is likely the cause of the long tunning time. The complexity grows with the size of the dataset, the number of features, and the model parameters.
+
+Scalability: Because of the computational cost, scaling Random Forest to very large datasets or high-dimensional data can be challenging and might require significant computational resources.
+
+Model Interpretability: While not as complex as some other models like neural networks, Random Forests are still considered a "black box" compared to simpler models like Logistic Regression. This can make it difficult to understand the decision-making process of the model and to explain individual predictions.
+
+Tuning Required: Random Forest models have several hyperparameters (like the number of trees, max depth, min samples split, etc.) that can greatly influence performance. Finding the optimal settings can be time-consuming and require a lot of trial and error or automated search techniques like grid search or random search, which can further increase the computational burden.
+
+- Suggested Improvement:
+
+Model Simplification: We should simplying the model by reducing the number of trees or the depth of each tree, which might reduce training time at the cost of some accuracy.
+
+Feature Selection: Reducing the number of features through feature selection can significantly decrease training time and sometimes even improve model performance by eliminating noise.
+
+Incremental Learning: Some models allow for incremental learning, where the model is trained on chunks of the dataset sequentially, which can reduce memory consumption and potentially training time.

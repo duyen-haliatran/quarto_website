@@ -20,7 +20,6 @@ format:
     theme: cosmo
     css: styles.css
     toc: true
-    code-fold: true
 
 
 
