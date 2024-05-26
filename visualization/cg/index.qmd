@@ -3,6 +3,10 @@ title: Machine Learning for Uplift
 format: 
     dashboard:
         orientation: rows
+theme: 
+  - cosmo
+  - custom.scss
+  - quarto.scss
 ---
 
 # Column {.tabset}

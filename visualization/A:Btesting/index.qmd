@@ -3,6 +3,7 @@ title: AB testing
 format: 
     dashboard:
         orientation: rows
+theme: custom.scss
 ---
 
 ```{python}
@@ -20,7 +21,7 @@ This is a replication project doing A/B testing
 
 ## Row
 ```{python}
-data = pd.read_stata("/Users/duyentran/Desktop/UCSD_Study/MGTA495-MA/quarto_website/projects/project1/karlan_list_2007.dta")
+data = pd.read_stata("karlan_list_2007.dta")
 
 # Prepare the plots for treatment and control groups who made donations
 data_donated = data[data['amount'] > 0]

@@ -1,0 +1,875 @@
+---
+title: 'CG Propensity'
+author: Duyen Tran
+date: today
+callout-appearance: minimal # this hides the blue "i" icon on .callout-notes
+editor_options: 
+  chunk_output_type: console
+---
+
+##
+CG has tasked me with developing a predictive model utilizing the "Space Pirates" game data. The primary objective is to identify which gamers are more or less inclined to purchase the "Zalon" campaign. This involves analyzing player behavior, engagement levels, and other relevant metrics to forecast their purchasing decisions accurately.
+
+### Analytical Models Employed:
+To achieve the objective, the following predictive analytics models are being considered and implemented throughout the campaign:
+
+- Logistic Regression Model: This model is used for binary classification tasks. In this context, it will predict the likelihood of a gamer purchasing the Zalon campaign, categorizing predictions into two groups: likely buyers and unlikely buyers.
+
+- Neural Network Model: This model, known for its ability to capture complex nonlinear relationships, is employed to understand deeper patterns in gamer behavior that may influence their decision to purchase. It leverages layers of processing units to learn from the data, offering a more nuanced prediction compared to traditional models.
+
+- Random Forest Model: A robust ensemble learning method that uses multiple decision trees to make predictions. It is particularly useful for handling large datasets with numerous variables, providing insights into the importance of different features affecting the purchasing decision.
+
+Each of these models offers unique strengths in data analysis and prediction accuracy. By comparing their performance, we aim to identify the most effective approach to predict gamer behavior regarding the Zalon campaign purchase decision.
+
+
+
+```{python}
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import pandas as pd
+import pyrsm as rsm 
+import numpy as np 
+from scipy import stats
+from sklearn.preprocessing import power_transform
+```
+
+```{python}
+# load a custom python module
+#from utils.functions import example
+
+
+## setup functions for autoreload
+#%reload_ext autoreload
+#%autoreload 2
+#%aimport utils.functions
+```
+
+## Data Description
+
+```{python}
+## loading the data
+cg_organic = pd.read_parquet("./data/cg_organic.parquet")
+```
+
+## Creative gaming
+
+Game telemetry dataset used for the Creative Gaming: Propensity-to-Buy Modeling case
+
+#### Feature descriptions
+
+* converted: Purchased the Zalon campain ("yes" or "no")
+* GameLevel: Highest level of game achieved by the user
+* NumGameDays: Number of days user played the game in last month (with or without network connection)
+* NumGameDays4Plus: Number of days user played the game in last month with 4 or more total users (this implies using a network connection)
+* NumInGameMessagesSent: Number of in-game messages sent to friends
+* NumFriends: Number of friends to which the user is connected (necessary to crew together in multiplayer mode) 
+* NumFriendRequestIgnored: Number of friend requests this user has not replied to since game inception
+* NumSpaceHeroBadges: Number of "Space Hero" badges, the highest distinction for gameplay in Space Pirates
+* AcquiredSpaceship: Flag if the user owns a spaceship, i.e., does not have to crew on another user's or NPC's space ship ("no" or "yes")
+* AcquiredIonWeapon: Flag if the user owns the powerful "ion weapon" ("no" or "yes")
+* TimesLostSpaceship: The number of times the user destroyed his/her spaceship during gameplay. Spaceships need to be re-acquired if destroyed.
+* TimesKilled: Number of times the user was killed during gameplay
+* TimesCaptain: Number of times in last month that the user played in the role of a captain
+* TimesNavigator: Number of times in last month that the user played in the role of a navigator
+* PurchasedCoinPackSmall: Flag if the user purchased a small pack of Zathium in last month ("no" or "yes")
+* PurchasedCoinPackLarge: Flag if the user purchased a large pack of Zathium in last month ("no" or "yes")
+* NumAdsClicked: Number of in-app ads the user has clicked on
+* DaysUser: Number of days since user established a user ID with Creative Gaming (for Space Pirates or previous games)
+* UserConsole: Flag if the user plays Creative Gaming games on a console ("no" or "yes")
+* UserHasOldOS: Flag if the user has iOS version 10 or earlier ("no" or "yes")
+* rnd_30k: Dummy variable that randomly selects 30K customers (1) and the remaining 90K (0)
+
+## Part 1
+
+```{python}
+cg_organic["converted_yes"] = cg_organic["converted"].map({"yes": 1, "no": 0})
+```
+
+We want to turn the yes's and no's into integers to allow for us to take the average of the converted column and calculate the average probability of converting. To do this, we use the map function to map the yes's and no's numerically represent.
+
+### What is the probability of organically converting to Zalon
+
+```{python}
+#prob_converting = cg_organic["converted_1_0"].mean()
+prob_converting = cg_organic["converted"].value_counts(normalize=True)
+prob_converting = prob_converting["yes"]
+print(prob_converting)
+```
+
+We can find the probability of organically converting to Zalon by taking the average of the `coverted_yes` column in the cq_organic cg_organicbase. This probability is 5.8%.
+
+### Basic summary statistics for each feature
+
+```{python}
+cg_organic.info()
+```
+
+Using the `cg_organic.info()` code, we are able to populate a summary overview of the variables that are present in the cq_organic database. As we can see, there seems to be no missing values, which allows us to begin our exploratory analytics right away without needing to conduct cg_organic cleaning. In addition, info output provides an overview of what type of variable each of the columns are, enabling us to manipulate the types if needed. For example, we created a new column called `converted_yes` to calculate the average conversion rate of cg gaming organic users. 
+
+```{python}
+cg_organic.describe()
+```
+
+```{python}
+# Non-numeric columns
+non_numeric_columns = cg_organic.select_dtypes(include=['object', 'category']).columns
+```
+
+```{python}
+# Find the number of Distinct values in each column
+cg_organic[non_numeric_columns].nunique()
+```
+
+```{python}
+# Find the most common levels in each column
+cg_organic[non_numeric_columns].apply(lambda x: x.value_counts().idxmax())
+```
+
+### Generate histograms for all numeric variables and frequency plots for non numeric variables
+
+```{python}
+cg_organic.hist(figsize=(15, 15))
+```
+
+The histograms above show the distribution of each variable present in our dataset. This is a critical step within the data preprocessing part of building a model. We can use the distributions to identify skew in our variables, and transform the variables so they are normally distributed.
+
+From the histogram above, we see many variables in this dataset are heavily skewed to the left. `DaysUser` and `GameLevel` are the only variables with a slight right skew. Because of the skews in the variables, this will give us an inaccurate model if we were to use the variables with their current distributions. Therefore, we need to transform the variables based on the skew they are exhibiting in the histograms. To correct the heavy left skew that is present in `DaysUser` and `GameLevel`, Before we begin building any models, we will want to transform these variables.
+
+Because of the heavy skew present in the columns in the data, we will want to transform them to normalize their distribution. Logistic regression does not assume a normal distribution of the independent variables, however, transformations can still help in stabilizing the variance and making relationships more linear. Therefore, we will want to consider transforming the variables to create a more linear relationship.
+
+#### Plotting the frequency of the non-numeric variables
+
+```{python}
+for var in non_numeric_columns:
+    cg_organic[var].value_counts().plot(kind='bar', figsize=(5, 5))
+    plt.title(f'Frequency plot of {var}')
+    plt.show()
+```
+
+## Part II: Predictive Model
+
+```{python}
+cg_train = cg_organic[cg_organic["training"] == 1]
+```
+
+```{python}
+lr = rsm.logistic(
+    data = {'CG Train Data': cg_train},
+    rvar = "converted",
+    lev = "yes",
+    evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ],
+)
+lr.summary()
+```
+
+Based on the logistic regression summary output above, we can use the odd's ratio, p_value
+
+The odds ratio is the exponentiation of the logistic regression coefficient and represents the change in odds resulting from a one-unit change in the independent variable. An odds ratio greater than 1 indicates an increase in odds with a one-unit increase in teh independent variable (conversion), while an odds ratio less than 1 indicates a decrease. Variables with small p-values and odds ratios significantly different from 1 (either much greater than 1 or less than 1) are generally considered the most important, as they indicate a statistically significant effect on the dependent variable. Based on the output above, we see that the variables significantly different than 1 and small p-values are: <ul>
+
+- `` - OR: 1.261, p-value less than 0.001
+- `NumFriends`  
+- `NumFriendRequestIgnored`        
+- `NumSpaceHeroBadges`
+- `AcquiredSpaceship_1_0`
+- `PurchasedCoinPackLarge_1_0`
+</ul>
+
+```{python}
+lr.plot("pred")
+```
+
+### What is the most 5 important variables in the model?
+
+```{python}
+lr.plot("vimp")
+```
+
+The bar chart above showing the permutation importance of various features or variables. Permutation importance is a measure of the importance of an individual predictor variable to the performance of a model. It's calculated by observing how random reordering (or permuting) of the feature's values affects the model performance; the idea is that a more important feature will have a more significant effect on model performance when its values are permuted.
+
+Based on the chart, here are the top 5 most important variables, listed in descending order of importance:
+
+`NumSpaceHeroBadges`
+`NumAdsClicked`
+`NumFriendRequestsIgnored`
+`TimesLostSpaceship`
+`GameLevel`
+
+### Generate prediction plots for each of these 5 features
+
+```{python}
+lr.plot("pred", incl = ["NumSpaceHeroBadges", "NumFriendRequestIgnored", "TimesLostSpaceship", "GameLevel", "NumFriends"])
+```
+
+### Create a new variable pred_logit
+
+```{python}
+cg_organic['pred_logit'] = lr.predict(cg_organic)['prediction']
+```
+
+### Plot gains curves for both traning and test set
+
+```{python}
+dct = {"train": cg_organic[cg_organic['training'] == 1], "test": cg_organic[cg_organic['training'] == 0]}
+fig = rsm.gains_plot(dct, "converted", "yes", "pred_logit")
+```
+
+Both the training and test lines follow a similar trajectory, which indicates good generalization of the model from training to unseen data. This is evident because there's not a significant gap between the two lines, suggesting the model is not overfitting to the training data.
+
+The rapid increase at the start of both curves suggests that the model is effective in identifying buyers when a small percentage of the population is targeted. As the percentage of the population targeted increases, the gain in percentage of buyers starts to plateau, indicating diminishing returns – targeting additional individuals beyond a certain point yields fewer new buyers.
+
+In summary, this gain chart shows a model that performs well on both the training and test sets, with good generalization and effective identification of individuals who are likely buyers, particularly within certain segments of the population
+
+### Report AUC-ROC score of the model
+
+```{python}
+from sklearn import metrics
+
+# prediction on training set
+pred = cg_organic[cg_organic['training'] == 1]['pred_logit']
+actual = cg_organic[cg_organic['training'] == 1]['converted_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+```{python}
+# prediction on test set
+pred = cg_organic[cg_organic['training'] == 0]['pred_logit']
+actual = cg_organic[cg_organic['training'] == 0]['converted_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+We can conclude that:
+
+The AUC for the training set is 0.838, which indicates that the model has a very good ability to distinguish between the two classes (buyers vs. non-buyers, for example) in the training data.
+
+The AUC for the test set is 0.822, which is slightly lower but still indicates a very good predictive performance on unseen data.
+
+The fact that the test AUC is close to the training AUC suggests that the model is generalizing well and not overfitting significantly to the training data. A small decrease from training to test set performance is normal because models will usually perform slightly better on the data they were trained on.
+
+## Part 3
+
+```{python}
+# Read the data organic control group
+cg_organic_control = pd.read_parquet('./data/cg_organic_control.parquet')
+group1 = cg_organic_control
+rsm.md("./data/cg_organic_control_description.md")
+```
+
+```{python}
+# Read the ad treatment group
+cg_ad_treatment = pd.read_parquet('./data/cg_ad_treatment.parquet')
+rsm.md("./data/cg_ad_treatment_description.md")
+```
+
+```{python}
+cg_ad_treatment['converted_yes'] = rsm.ifelse(cg_ad_treatment.converted == "yes", 1, rsm.ifelse(cg_ad_treatment.converted == 'no', 0, np.nan))
+```
+
+### Calculate the response rate and profit of group 1. 
+
+```{python}
+group1.converted.value_counts()
+```
+
+```{python}
+# Group 1 response rate
+
+group1_rr = group1.value_counts('converted')[1] / group1.shape[0]
+group1_rr
+```
+
+```{python}
+# Group 1 profit
+# Profit = (price - cost) * number of customers
+price = 14.99
+cost = 1.50
+quantity = group1.shape[0] * group1_rr
+group1_profit = price * quantity
+group1_profit
+```
+
+### Calculate the response rate and profit of group 2
+
+```{python}
+# Create group 2 variable
+group2 = cg_ad_treatment[cg_ad_treatment.rnd_30k == 1]
+group2.shape
+```
+
+```{python}
+def profit_calc(data, price = 14.99, cost = 1.50):
+    response_rate = data.value_counts('converted')[1] / data.shape[0]
+    revenue = price * response_rate * data.shape[0]
+    total_cost = cost * data.shape[0]
+    profit = revenue - total_cost
+    return response_rate, profit
+```
+
+```{python}
+group2_rr, group2_profit = profit_calc(group2)
+group2_rr, group2_profit
+```
+
+### Calculate the response rate and profit of group 3
+
+```{python}
+# Predict the probability of purchasing the Zalon campaign for group3
+cg_ad_treatment["pred_logit"] = lr.predict(cg_ad_treatment)['prediction']
+```
+
+```{python}
+# Create group 3 variable
+non_group2 = cg_ad_treatment[cg_ad_treatment.rnd_30k == 0]
+non_group2 = non_group2.sort_values(by='pred_logit', ascending=False)
+group3 = non_group2.head(30000)
+```
+
+```{python}
+group3_rr, group3_profit = profit_calc(group3)
+```
+
+```{python}
+# create a dataframe with the results
+results = pd.DataFrame({
+    'group': ['group1', 'group2', 'group3'],
+    'response_rate': [group1_rr, group2_rr, group3_rr],
+    'profit': [group1_profit, group2_profit, group3_profit]
+})
+results
+```
+
+```{python}
+non_group2["converted_yes"] = non_group2["converted"].map({"yes": 1, "no": 0})
+non_group2["converted_yes"] = non_group2["converted_yes"].astype("int")
+```
+
+```{python}
+fig = rsm.gains_plot(non_group2, "converted_yes", 1, "pred_logit")
+```
+
+```{python}
+# non_group2 AUC
+pred = non_group2['pred_logit']
+actual =non_group2['converted_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr,tpr).round(3)
+```
+
+
+
+The observed difference in the Area Under the Curve (AUC) values between part 2 and part 3 provides a compelling insight into the efficacy of using predictive models for campaign targeting. Specifically, the AUC of 0.809 in part 2 significantly outperforms the AUC of 0.592 in part 3. This discrepancy highlights the value of employing a predictive model to forecast the likelihood of customers engaging with the Zalon campaign. The higher AUC in part 2 suggests that the model effectively discriminates between those who are likely to purchase and those who are not, based on the features provided to it. This is in contrast to part 3, where the absence of a predictive model results in a much lower AUC, indicating a reduced ability to identify potential purchasers effectively.
+
+Moreover, the comparison of gains curves between the two parts further emphasizes the advantage of utilizing a predictive model. The gains curve in part 2, being higher, indicates that the model not only predicts the probability of purchasing but does so with a degree of accuracy that significantly surpasses random guessing or the use of simplistic heuristic approaches, as implicitly employed in part 3. This visual representation corroborates the numerical evidence provided by the AUC, underscoring the model's capability to prioritize customers more likely to respond positively to the campaign. 
+
+
+ One of the advantages of selling an in-app purchase was that Creative Gaming had detailed data on how players play the game. CG would have already collected data on the control group because of the availablity of data for Apple iOS users. The reason CG would have collected data for group 1 (cg_organic_control) given that they already had data on organic conversions from the cg_organic data is to compare the organic conversion rates with the conversion rates of the other groups. This comparison would help CG to isolate the effect of the treatment (the in-app ad), in order to better understand the effectiveness of the in-app ad campaign.
+
+## Part 4
+
+### Retrain the logistic regression model from Part II on the sample of 30k customers
+
+```{python}
+cg_ad_treatment['converted_yes'] = rsm.ifelse(cg_ad_treatment.converted == "yes", 1, rsm.ifelse(cg_ad_treatment.converted == 'no', 0, np.nan))
+```
+
+```{python}
+lr2 = rsm.model.logistic(
+    data = {"cg_ad_treatment" : cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 1]},
+    rvar = "converted_yes",
+    evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ])
+lr2.summary()
+```
+
+```{python}
+lr2.summary(main = False, vif = True)
+```
+
+```{python}
+# Generate predictions for all 150,000 customers
+cg_ad_treatment['pred_logit_ad'] = lr2.predict(cg_ad_treatment)['prediction']
+```
+
+The model's summary shows that several variables are statistically significant in predicting conversion, as indicated by the p-values (for example, PurchasedCoinPackLarge and UserHasOldOS). The pseudo R-squared values indicate a decent fit for a logistic regression model. Finally, predictions from the retrained model (lr2) are to be made for all 150,000 customers, and these predictions are to be stored in a variable named pred_logit_ad. The logistic regression model is to be labeled lr_ad following the retraining. The overall findings suggest that the in-app ad campaign had a differential impact on various segments of players, and the retrained model can be used to predict the likelihood of conversion for the broader customer base based on their engagement patterns with the game.
+
+### Compare the performance of original organic model and new ad model
+
+```{python}
+fig = rsm.gains_plot(
+    cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0],
+    "converted", "yes",
+    ["pred_logit", "pred_logit_ad"]
+)
+```
+
+The graph shows the performance comparison between the original model ('organic') and the new model ('ad') using the Area Under the Curve (AUC) metric and gains curves. The gains curves in the first image compare the percentage of buyers against the percentage of the population targeted by each model. The line representing the 'ad' model ('pred_logit_ad') consistently lies above the 'organic' model ('pred_logit'), suggesting that the 'ad' model predicts conversions more effectively across the entire range of the targeted population. 
+
+```{python}
+#AUC for organic model across the 120k customers that are not in group 2
+pred = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]['pred_logit']
+actual = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]['converted_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+print(metrics.auc(fpr, tpr).round(3))
+
+actual = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]['converted']
+print(rsm.auc(actual, pred, 'yes').round(3))
+```
+
+```{python}
+# AUC for new ad model across the 120k customers that are not in group 2
+pred = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]['pred_logit_ad']
+actual = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]['converted_yes']
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+print(metrics.auc(fpr, tpr).round(3))
+
+actual = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]['converted']
+print(rsm.auc(actual, pred, 'yes').round(3))
+```
+
+The 'organic' model has an AUC of 0.592, indicating a fair but not strong discriminatory ability. In contrast, the 'ad' model achieves a higher AUC of 0.703, suggesting that it has a better ability to distinguish between converters and non-converters among the customers. This improvement in AUC by the 'ad' model supports the premise that incorporating in-app ad data into the model training process can enhance its predictive performance, particularly for identifying potential customers who respond to in-app advertisements.
+
+### Calculate the profit improvement of using ad model instead of the organic
+
+```{python}
+margin = 14.99
+cost = 1.5
+```
+
+```{python}
+# Converting using the ad model to target the best 30000 customers in the cg_ad_treatment dataset that not in 'rnd_30k == 1'
+ad_best30000 = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0].nlargest(30000, 'pred_logit_ad')
+ads_response_rate, ads_profit = profit_calc(ad_best30000)
+ads_response_rate, ads_profit
+```
+
+```{python}
+mod_pef = pd.DataFrame({
+    "model": ["Organic", "Ads"],
+    "Response Rate": [group3_rr, ads_response_rate],
+    "Profit": [group3_profit, ads_profit]
+})
+mod_pef
+```
+
+```{python}
+# The profit improvement from using the ad model
+profit_improvement = ads_profit - group3_profit
+profit_improvement
+```
+
+The above calculates the profit improvement of using the "ad" model over the "organic" model. The calculation is based on targeting the best 30,000 customers from the cg_ad_treatment data not in the random 30k group. The code computes the expected profit for the top-scoring customers according to each model's predictions, using a defined margin and cost to determine the break-even point.
+
+The profit from the "organic" model is calculated and then compared to the profit from the "ad" model. The results show that the "ad" model yields a higher profit. Specifically, the "organic" model achieves a profit of approximately $51,715 with a ~22% response rate, whereas the "ad" model yields about $78,173 with a ~27% response rate, resulting in a profit improvement of around $26,457 and response rate improvement of ~51.16% when using the "ad" model.
+
+In summary, the "ad" model, which incorporates the in-app ad data, significantly outperforms the "organic" model in terms of profit when targeting the same top 30,000 customers outside of the initial random 30k group. This suggests that the "ad" model is more effective at identifying customers who are likely to convert, leading to a more profitable targeting strategy.
+
+### Compare the permutation importance plot of the organic and the ad model
+
+```{python}
+# Permutation importance plot of the organic model
+lr.plot('vimp')
+```
+
+```{python}
+# Permutation importance plot of the ad model
+lr2.plot('vimp')
+```
+
+The permutation importance plots for both the "organic" and the "ad" models reveal differences in the relative importance of features when predicting customer conversion. In the "organic" model, the most important features seem to be NumSpaceHeroBadges, NumFriendRequestsIgnored, and TimesLostSpaceship, whereas in the "ad" model, NumAdsClicked appears to be the most significant feature, followed by NumFriends and GameLevel.
+
+The discrepancy in feature importance between the two models can be attributed to the different nature of the datasets they were trained on. The "organic" model likely did not have access to data on customer interactions with in-app ads, which explains why gameplay-related features such as badges and friends are more predictive in this model. On the other hand, the "ad" model includes data from the in-app ad campaign, making NumAdsClicked a crucial predictor, as it directly relates to the customer's engagement with the ad content that is hypothesized to influence conversion.
+
+Furthermore, the change in the ranking of features such as GameLevel and NumFriends between the two models suggests that the context in which these features affect conversion may have shifted when ad engagement data is included. It's possible that the behavior patterns associated with clicking ads are more indicative of conversion likelihood than organic game engagement metrics when ad data is present. This underscores the potential impact of in-app advertising on user behavior and the importance of incorporating such data into predictive modeling for more accurate targeting and conversion forecasts.
+
+## Part 5
+
+Based on the output of the logistic regression, we believe that the neural network and random forest models will perform better than the logistic regression model. We will train and tune a neural network and random forest model on the ad data and compare their performance to the logistic regression model.
+
+We first started by creating a simple neural network with 1 hidden layer and 1 node.
+
+```{python}
+clf = rsm.model.mlp(
+    data = {'cg_ad_campaign': cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 1]},
+    rvar = 'converted_yes',
+    evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ],
+    hidden_layer_sizes = (1, ),
+    mod_type = 'classification'
+)
+
+clf.summary()
+```
+
+NN with 1 hidden layer and 2 nodes
+
+```{python}
+clf1 = rsm.model.mlp(
+    data = {'cg_ad_campaign': cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 1]},
+    rvar = 'converted_yes',
+    evar = ["GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS",
+    ],
+    hidden_layer_sizes = (2, ),
+    mod_type = 'classification'
+)
+
+clf1.summary()
+```
+
+```{python}
+from sklearn.model_selection import GridSearchCV
+hls = [(1,), (2,), (3,), (3, 3), (4, 2), (5, 5)]
+learning_rate_init = [0.1, 0.01, 0.001, 0.0001]
+
+
+param_grid = {"hidden_layer_sizes": hls, "learning_rate_init": learning_rate_init}
+scoring = {"AUC": "roc_auc"}
+
+clf_cv = GridSearchCV(
+    clf.fitted, param_grid, scoring=scoring, cv=5, n_jobs=4, refit="AUC", verbose=5
+)
+```
+
+```{python}
+clf.data_onehot.mean().round(3)
+clf.data.converted_yes.mean()
+```
+
+```{python}
+clf_cv.fit(clf.data_onehot, clf.data.converted_yes)
+```
+
+```{python}
+clf_cv.best_params_
+```
+
+```{python}
+clf_cv.best_score_.round(3)
+```
+
+```{python}
+clf42 = rsm.model.mlp(
+    data = {'cg_ad_campaign': cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 1]},
+    rvar = 'converted_yes',
+    evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ],
+    hidden_layer_sizes = (4, 2),
+    learning_rate_init = 0.1,
+    mod_type = 'classification'
+)
+
+clf42.summary()
+    
+```
+
+### Compare the performance of the neutral network ad model and the logistic regression ad model
+
+```{python}
+cg_ad_treatment['pred_nn'] = clf42.predict(cg_ad_treatment)['prediction']
+```
+
+```{python}
+fig = rsm.gains_plot(
+    cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0],
+    "converted", "yes",
+    ["pred_nn", "pred_logit_ad"]
+)
+```
+
+Based on the graph, the neural network is better because for any given percentage of customers, it captures a higher percentage of the total response compared to the logistic regression model.
+
+In the neural network model, we use Grid Search to tune the hyperparameters, i.e. the hidden layer size and the learning rate. These two hyperparameters can influence the outcome:
+
+- Hidden layer size: By finding the right balance through grid search, we can avoid overfitting or underfitting the model, leading to a model that generalizes well to new data.
+
+- Learning rate: the learning rate controls how much the model's weights are updated during training. Tuning the learning rate to a level that allows for efficient and effective learning is critical for good performance.
+
+The combination of these two hyperparameters enables the neural network to capture the complexity of the data without overfitting, leading to better generalization and ultimately better performance on the gain chart.
+
+```{python}
+# prediction on rnd_30k == 0 for neutral network "ad" model
+pred = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]["pred_nn"]
+actual = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]["converted_yes"]
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+```{python}
+# again, predict on rnd_30k == 0 for logistic regression "ad" model
+pred = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]["pred_logit_ad"]
+actual = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]["converted_yes"]
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+The AUC of the neural network model is 0.782 while the AUC of the logistic regression model is 0.703. Both models have good performance, but the difference in AUC shows that the neural netwrork model has a significant better performance in term of overall measure of accuracy across all thresholds. This confirms the visual interpretation from the gain chart, where the neural network model outperforms the logistic regression model.
+
+### Calculate the profit improvement of the neutral network ad
+
+```{python}
+nn_group3 = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0].nlargest(30000, 'pred_nn')
+nn_response_rate, nn_profit = profit_calc(nn_group3)
+```
+
+```{python}
+mod_pef = pd.DataFrame({
+    "model": ["Neural Network", "Ads"],
+    "Response Rate": [nn_response_rate, ads_response_rate],
+    "Profit": [nn_profit, ads_profit]
+})
+mod_pef
+```
+
+```{python}
+profit_improvement = nn_profit - ads_profit
+profit_improvement
+```
+
+That said, with the better performance of the neural network model, we can expect a better profit improvement compared to the logistic regression model. The profit improvement from using Neural Network model over the logistic regression model ad is $68,954, this represents a 22.05\% improvement in profit when using Neural Network model over the logistic regression model ad.
+
+### Train and tune random forest model
+
+```{python}
+rf = rsm.model.rforest(
+    data = {'cg_ad_campaign': cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 1]},
+    rvar = 'converted_yes',
+    evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ]
+)
+rf.summary()
+```
+
+#### Model Tuning
+
+```{python}
+max_features = [None, 'auto', 'sqrt', 'log2', 0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0]
+n_estimators = [10, 50, 100, 200, 500, 1000]
+
+param_grid = {"max_features": max_features, "n_estimators": n_estimators}
+scoring = {"AUC": "roc_auc"}
+
+rf_cv = GridSearchCV(rf.fitted, param_grid, scoring=scoring, cv=5, n_jobs=4, refit="AUC", verbose=5)
+```
+
+```{python}
+rf.data_onehot.mean().round(3)
+rf.data.converted_yes.mean()
+```
+
+```{python}
+rf_cv.fit(rf.data_onehot, rf.data.converted_yes)
+```
+
+```{python}
+rf_cv.best_params_
+```
+
+#### Retrain the model with the best hyperparameters
+
+```{python}
+rf = rsm.model.rforest(
+    data = {'cg_ad_campaign': cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 1]},
+    rvar = 'converted_yes',
+    evar = [
+        "GameLevel",
+        "NumGameDays",
+        "NumGameDays4Plus",
+        "NumInGameMessagesSent",
+        "NumFriends",
+        "NumFriendRequestIgnored",
+        "NumSpaceHeroBadges",
+        "AcquiredSpaceship",
+        "AcquiredIonWeapon",
+        "TimesLostSpaceship",
+        "TimesKilled",
+        "TimesCaptain",
+        "TimesNavigator",
+        "PurchasedCoinPackSmall",
+        "PurchasedCoinPackLarge",
+        "NumAdsClicked",
+        "DaysUser",
+        "UserConsole",
+        "UserHasOldOS"
+    ],
+    n_estimators = 1000,
+    max_features = 0.25,
+)
+rf.summary()
+```
+
+```{python}
+cg_ad_treatment['pred_rf'] = rf.predict(cg_ad_treatment)['prediction']
+```
+
+```{python}
+fig = rsm.gains_plot(
+    cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0],
+    "converted", "yes",
+    ["pred_logit_ad", "pred_rf"]
+)
+```
+
+At the initial stages (when a small percentage of the population is targeted), the random forest model captures a higher percentage of the total response compared to the logistic regression model. This suggest that the random forest model is better at capturing the response in the early stages of targeting.
+
+As more the population is targeted, both models' curves flatten out, which is expected as the company each out to less likely buyers, the gain from each additional percentage of the population targeted decreases. However, the random forest model, which has been fine-tuned using grid search on hyperparameters like max features and number of estimators, appears to outperform the logistic regression model at all levels of the population targeted.
+
+The reason why the random forest perform better:
+
+- Non-linearity: Random forest can capture complex, non-linear relationships between the features and the target variable, which logistic regression may not able to model as effectively.
+
+- Interaction effects: Random forest naturally account for interaction between features without needing explicit feature engineering.
+
+- Hyperparameter tuning: The Grid Search process likely helped i finding an optimal combination of hyperparameters for the Random Forest model, enhancing its ability to generalize.
+
+```{python}
+# prediction on rnd_30k == 0 for neutral network "ad" model
+pred = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]["pred_rf"]
+actual = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0]["converted_yes"]
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+The Random Forest model has AUC of 0.78, indicating that it has a good performance, with 78% chance of correctly distinguishing between a converting and non-converting customer. This is higher than the AUC of the logistic regression model, which is 0.703. This confirms the visual interpretation from the gain chart, where the random forest model outperforms the logistic regression model.
+
+This means that the Random Forest model would likely lead to a better identification of positive cases, which could be more efficient and potentially more profitable.
+
+### Calculate the profit improvement of the random forest model
+
+```{python}
+rf_group3 = cg_ad_treatment[cg_ad_treatment['rnd_30k'] == 0].nlargest(30000, 'pred_rf')
+rf_response_rate, rf_profit = profit_calc(rf_group3)
+```
+
+```{python}
+mod_pef = pd.DataFrame({
+    "model": ["Random Forest", "Ads"],
+    "Response Rate": [rf_response_rate, ads_response_rate],
+    "Profit": [rf_profit, ads_profit]
+})
+mod_pef
+```
+
+```{python}
+profit_improvement = rf_profit - ads_profit
+profit_improvement
+```
+
+Based on the calculation above, the profit improvement from using Random Forest model over the logistic regression model ad is 15,949.36, this represents a 12\% improvement in profit when using Random Forest model over the logistic regression model ad.
+
+This aligns with the gain chart and AUC, which both show that the Random Forest model outperforms the logistic regression model in terms of capturing the response and overall accuracy.
+
+

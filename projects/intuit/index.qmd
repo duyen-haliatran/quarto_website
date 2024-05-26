@@ -1,0 +1,1010 @@
+---
+title: "Intuit Upgrade Notebook"
+author: Duyen Tran
+date: today
+callout-appearance: minimal # this hides the blue "i" icon on .callout-notes
+editor_options: 
+  chunk_output_type: console
+---
+
+
+This analytical examines the efficacy of an upsell campaign targeting small businesses to upgrade to the latest QuickBooks software, based on a dataset of 75,000 entities from a pool of 801,821. 
+
+Utilizing logistic regression and neural networks, the analysis aims to:
+
+- Understand customer behaviors and preferences towards the software upgrade.
+- Identify factors influencing the likelihood of upgrading.
+- Enhance targeting strategies for future marketing campaigns to optimize conversion rates and customer satisfaction.
+
+By leveraging logistic regression, we assess the probabilistic impact of variables on customer decisions, while neural networks allow for a deeper dive into complex, non-linear relationships among data points. This dual-model approach provides:
+
+- Insights into direct and subtle factors affecting upgrade decisions.
+- Identification of potential customer segments more likely to respond positively.
+- A foundation for more effective and efficient marketing strategies, contributing to business growth and customer loyalty.
+
+## Data Analysis
+
+```{python}
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pyrsm as rsm
+
+# increase plot resolution
+# mpl.rcParams["figure.dpi"] = 150
+rsm.__version__
+
+intuit75k = pd.read_parquet("data/intuit75k.parquet")
+```
+
+### Data Description: Intuit Quickbooks upgrade
+
+The purpose of this exercise is to gain experience modeling the response to an upsell campaign. The `intuit75k.parquet` file contains data on 75,000 (small) businesses that were selected randomly from the 801,821 that were sent the wave-1 mailing. The mailing contained an offer to upgrade to the latest version of the Quickbooks software.
+
+Variable `res1` denotes which of these businesses responded to the mailing by purchasing Quickbooks version 3.0 from Intuit Direct. Note that Intuit Direct sells products directly to its customers rather than through a retailer. Use the available data to predict which businesses that did not respond to the wave-1 mailing, are most likely to respond to the wave-2 mailing. Note that variables were added, deleted, and recoded so please ignore the variable descriptions in Exhibit 3 in the case in the course reader. Instead, use the variable descriptions below:
+
+#### **Variable description**
+
+* id: Small business customer ID
+* zip5: 5-Digit ZIP Code (00000=unknown, 99999=international ZIPs).
+* zip_bins: Zip-code bins (20 approx. equal sized bins from lowest to highest zip code number)
+* sex: Gender Identity "Female", "Male", or "Unknown"
+* bizflag: Business Flag.  Address contains a Business name (1 = yes, 0 = no or unknown).
+* numords: Number of orders from Intuit Direct in the previous 36 months
+* dollars: Total $ ordered from Intuit Direct in the previous 36 months
+* last: Time (in months) since last order from Intuit Direct in previous 36 months
+* sincepurch: Time (in months) since original (not upgrade) purchase of Quickbooks
+* version1: Is 1 if customer's current Quickbooks is version 1, 0 if version 2
+* owntaxprod: Is 1 if customer purchased tax software, 0 otherwise
+* upgraded: Is 1 if customer upgraded from Quickbooks vs. 1 to vs. 2
+* res1: Response to wave 1 mailing ("Yes" if responded else "No")
+* training: 70/30 split, 1 for training sample, 0 for validation sample
+
+
+### Data Preprocessing
+
+In the data preprocessing section, we will be reviewing the variables that are present in our dataset and identifying any potential scaling or data pre-processing actions that needs to be made. We will also be reviewing our dataset to ensure tha there are no null values, and that the data types are aligned. 
+
+```{python}
+intuit75k.head()
+```
+
+```{python}
+intuit75k.hist(figsize=(20, 20))
+```
+
+Prior to creating any models, we want to review the distribution and scale of the variables in the dataset. If there is scale in the distribution of the variables as exemplified by the histograms produced above, this will effect the ability of our model to accurately and effectively predict the response to our second wave mailing outreach. Based on the distribution of the histograms above, the variable with the greatest skew is the `dollars`. It skews heavily towards the left, as do the `numrods` and `sincepurch` variables. Due to this, we will want to apply some type of transformation to these variables to normalize their distribution. 
+
+```{python}
+train_data = intuit75k[intuit75k['training'] == 1]
+```
+
+Here we are creating our training set of data. This corresponds to any record that has a 1 in the `training` column within the `Intuit75k database`. As per the intuit instructions, the data was already pre-split into 70:30 training:test sets. If the data was not pre-split, we would want to consider employing the `StratifyShuffleSplit` method to create our training and testing data. This would ensure that our training and test sets have the same number of yes's, which would provide a more accurate and representative dataset for the training and testing of our model.
+
+```{python}
+intuit75k['res1'].value_counts()
+```
+
+### Correlation Between Features
+
+In addition to scaling the data before we start building our models, we want to identify any potential correlation between the features in our dataset. If any features are highly correlated, this could lead to multi-collinearity within our models and lead to inflation of the variable coefficients or inflated importance of features on our model. If we are able to identify any correlation prior to building our model, we are able to adjust which features are correlated and see how this might increase their importance if a highly-correlated feature is omitted from the model. 
+
+```{python}
+corr_columns = ['zip_bins','bizflag','numords','dollars','last','sincepurch']
+corr_matrix = train_data[corr_columns].corr()
+corr_matrix
+```
+
+Based on the correlation matrix created above, we see that there is not a high level of correlation between the features of this dataset. A  high level of correlation is traditionally considered within the range of 0.7 and 0.9. Correlation coefficients whose magnitude is between 0.5 and 0.7 indicates that variables are moderately correlated. `Dollars` and  `numrods` have a moderate correlation value of 0.59. It would make sense that these variables have a moderate correlation. The `numrod` variable represents number of orders from Intuit Direct in the previous 36 months, whereas `Dollars` represents the total dollar value ordered from intuit direct in the previous 36 months. Traditionally, orders and dollar value tend to have a positive - direct relationship, as we see `orders` increase, we expect to see `dollars` increase as well.
+
+## Logistic Regression Model
+
+Now that we have transformed the variables to be on the same scale and have identified correlated variables, we can begin building our first logistic regression model. The goal of this model is to predict the probability of a business responding to a mailed offer.
+
+```{python}
+#response rate of the first wave
+response_rate = train_data["res1_yes"].mean()
+response_rate
+```
+
+We can find the average response rate to the first wave mailing offer by taking the mean of the `res1_yes` column across the training dataset. This will be important when we try to project our model's findings onto the larger client base as a whole. This variable represents whether a business responded to the offer or not. The average response rate in the first wave mailing is 4.76%. 
+
+### **Logistic Regression Model 1**
+
+```{python}
+lr = rsm.logistic(
+    data = {'wave1': train_data},
+    rvar = "res1_yes",
+    evar = [
+        "zip_bins",
+        "bizflag",
+        "numords",
+        "dollars",
+        "last",
+        "sincepurch",
+        "sex",
+        "version1",
+        "owntaxprod",
+        "upgraded"
+    ]
+)
+```
+
+```{python}
+lr.summary(main = True, vif = True)
+```
+
+#### **Logistic Regression Summary Interpretation**
+Based on the first version of our logistic regression model, there are a couple of important things to note in regards to feature selection and overall performance of the model. First, we want to take a look at our Pseudo R-squared (McFadden) and Pseudo R-squared (McFadden Adjusted) values. Based on our output, we see that these values are **0.073** and **0.07**, respectively. The Pseudo R-squared values are generally lower than the traditional R-squared in linear regression models and don't have a fixed range. However, the values for our McFadden and McFadden are still on the lower side. This isn't automatically a deal-breaker for this model or automatically a reason to throw our model away, but we would want weigh these R-squared values in conjunction with other factors (such as AUC, and Chi-squared) to evaluate the effectiveness and predictive performance of our model. <br>
+
+In addition to the r-squared values, we also want to evaluate the AUC value. AUC indicates a model's ability to discriminate between a positive and negative class. The AUC value is on a fixed scale, with a base threshold of 0.5. Any value over 0.5 is considered to be a better value, and indicate a better model. Our first logisitic regression model had an AUC of 0.708 which suggests that the model has a good ability to distinguish between the two classes (i.e. responded to the mailing offer or not). We can also use the AIC and BIC values to evaluate our model as well. The AIC and BIC respectively represent the Akaike Information Criterion and the Bayesian Information Criterion. These values also indicate the models's fit to the data. Generally, the goal is to have a lower AIC and BIC value, and models with lower AIC and BIC values are preferred. Our model has an AIC value of 18688.123, and the BIC value of 18794.545. These values are a bit difficult to represent or evaluate at first, but will become more important when we begin to omit variables and see how these values change. If both the AIC and BIC values become lower when removing a variable, we would consider using the model that produces the lower values. 
+
+<br>Finally, the most important value when evaluating a models performance is the Chi-squared value. The Chi-squared value of 1425.521 with 11 degrees of freedom and a p.value < 0.001 suggests that the model as a whole is statistically significant, and at least some of the predictors or features in this model are significantly related to the outcome. Therefore, our first logistic regression model with all of the variables included seems to be a statistically significant model with a decent prediction ability. We would want to consider removing any statistically insignificant variables to see how the model's performance changes, in hopes of building a more powerful prediction model.
+
+```{python}
+lr.plot("vimp")
+```
+
+#### **Permutation Importance Plot Interpretation**
+Based on the permutation importance graph above, we can see that the variables of importance are `upgraded`, `last`, `zip_bins`, `numrods`, `version1`, `owntaxprod`, `dollars`. These variables however, do not contribute to a very large decrease in AUC, but this graph allows us to view the ratio of importance of the variables. Additionally, we can see that the `bizflag`, `sincepurch`, and `sex` variables are not important. Based on their lack of importance via AUC decrease, and their statistical insignificance, as identified by their high p-values in the logistic regression summary, we will consider testing their removal from the model and seeing if the model's performance changes.
+
+```{python}
+lr.plot("pred")
+```
+
+#### **Prediction Plot Interpretation**
+Based on the prediction plots above, it looks like gender has very little influence of a prediction value. Similarily `bizflag`, and `since_purch` also looks insignificant, and doesn't seem to contribute much to the prediction value. Therefore, we will want to remove them from this logistic regression model to see if the new logistic regression improves the AUC and r^2 value. 
+
+#### **Testing the removal of features from the model**
+
+As mentioned above, `bizflag`, `sincepurch`, and `sex` all have low importance and are statistically insignificant to our model, as indicated by their high p-values. We want to test removing them from our model to see if the performance of our model changes. The change in model performance will be interpreted based on how the AUC, BIC, Pseudo R-Squared, and Chi-squared values change in comparison to our baseline model with all of the features included as explanatory variables.
+
+#### **Removing `bizflag`, `sincepurch`, and `sex` together**
+
+```{python}
+lr.summary(main = False, test=['sincepurch', 'sex','bizflag'])
+```
+
+##### **Model Interpretation**
+We first wanted to see the model's performance when we removed `sincepurch`, `sex`, and `bizflag` together from the model. As identified above, we noticed that these variables had the lowest importance to the model and were statistically insignificant to the baseline logistic regression model. The test function enables us to generate a logistic regression output as if we were generating the models without these variables being included. We are then able to compare the model's performance with and without them included. As we see, the first output shows our baseline model's output. We see the same metrics that were identified previously. 
+
+<br> The second output shows us the Pseudo R-squared values in the baseline logit model vs. our new model with the variables being removed. As we see via the output, the Pseudo r-squared value does not change in model 1 vs. model 2, this indicates that the overall explanatory power of the models is unchanged despite the removal of the `sincepurch`,`sex`, and `bizflag` variables. However, the chi-squared value and the p.value change significantly, which is critical. The chi-squared value of 1.257 with 4 degrees of freedom and a p-value of 0.869 from comparing Model 1 and Model 2 suggests that the variables removed do not significantly contribute to the model. A high p-value (p > 0.05) indicates that there is no significant loss (or gain) in explanatory power due to these changes.
+
+<br> essentially, the comparison suggests that the removal of `bizflag`, `sincepurch`, and `sex` between Model 1 and Model 2 does not significantly affect the model's explanatory power or predictive ability. This is indicated by the unchanged Pseudo R-squared values and the non-significant chi-squared test for the comparison. Therefore, if removing variables does not significantly decrease the model's performance, it might be beneficial to keep the model simpler by excluding them. A simpler model is easier to interpret and may generalize better to new data. We will also want to test the removal of the variables one by one to see if that improves the model's explanatory power. 
+
+#### **Removing `sincepurch`, and `sex`**
+
+```{python}
+lr.summary(main = False, test = ['sincepurch', 'sex'])
+```
+
+##### **Model interpretation**
+In the previous section, we evaluated the performance of our logistic regression model when we removed the three insignificant variables from our model as interpreted from their individual p-values. In this removal round, we wanted to evalute the performance of our logistic regression model if we considered removing `sincepurch` and `sex`. Both models have the same Pseudo R-squared values (0.071), which suggests that the overall explanatory power of the models is unchanged despite the removal or addition of variables. Additionally, The chi-squared value of 0.331 with 3 degrees of freedom and a p-value of 0.954 from comparing Model 1 and Model 2 suggests that the variables removed (or added) do not significantly contribute to the model. A high p-value (p > 0.05) indicates that there is no significant loss (or gain) in explanatory power due to these changes. This indicates that we might want to consider removing them completely from the model as they don't increase the explanatory power of the model. 
+
+#### **Removing `sex`**
+
+```{python}
+lr.summary(main = False, test = ['sex'])
+```
+
+##### **Model interpretation**
+In this removal round, we wanted to evaluate the performance of our logistic regression model if we tested the removal of `sex`. Both models have the same Pseudo R-squared values (0.071), which suggests that the overall explanatory power of the models is unchanged despite the removal or addition of variables. Additionally, The chi-squared value of 0.062 with 2 degrees of freedom and a p-value of 0.97 from comparing Model 1 and Model 2 suggests that the variables removed (or added) do not significantly contribute to the model. A high p-value (p > 0.05) indicates that there is no significant loss (or gain) in explanatory power due to these changes. This indicates that we might want to consider removing them completely from the model as they don't increase the explanatory power of the model. 
+
+#### **Removing `sincepurch`**
+
+```{python}
+lr.summary(main = False, test=['sincepurch'])
+```
+
+##### **Model interpretation**
+In this removal round, we wanted to evaluate the performance of our logistic regression model if we tested the removal of `sincepurch`. Both models have the same Pseudo R-squared values (0.071), which suggests that the overall explanatory power of the models is unchanged despite the removal or addition of variables. Additionally, The chi-squared value of 0.268 with 1 degrees of freedom and a p-value of 0.605 from comparing Model 1 and Model 2 suggests that the variables removed (or added) do not significantly contribute to the model. A high p-value (p > 0.05) indicates that there is no significant loss (or gain) in explanatory power due to these changes. This indicates that we might want to consider removing them completely from the model as they don't increase the explanatory power of the model. 
+
+#### **Removing `bizflag`**
+
+```{python}
+lr.summary(main = False, test=['bizflag'])
+```
+
+##### **Model interpretation**
+In this removal round, we wanted to evaluate the performance of our logistic regression model if we tested the removal of `bizflag`. Both models have the same Pseudo R-squared values (0.071), which suggests that the overall explanatory power of the models is unchanged despite the removal or addition of variables. Additionally, The chi-squared value of 0.924 with 1 degree of freedom and a p-value of 0.337 from comparing Model 1 and Model 2 suggests that the variables removed (or added) do not significantly contribute to the model. A high p-value (p > 0.05) indicates that there is no significant loss (or gain) in explanatory power due to these changes. This indicates that we might want to consider removing them completely from the model as they don't increase the explanatory power of the model. 
+
+#### **Removing `dollars`**
+
+```{python}
+lr.summary(main = False, test=['dollars'])
+```
+
+##### **Model interpretation**
+As mentioned previous, Both models have the same Pseudo R-squared values (0.071), suggesting that the overall explanatory power of the models is unchanged despite the removal or addition of variables. Additionally, The chi-squared value of 0.331 with 3 degrees of freedom and a p-value of 0.954 from comparing Model 1 and Model 2 suggests that the variables removed (or added) do not significantly contribute to the model. A high p-value (p > 0.05) indicates that there is no significant loss (or gain) in explanatory power due to these changes. This indicates that we might want to consider removing them completely from the model as they don't increase the explanatory power of the model. 
+
+<br>
+The comparison between Model 1 and Model 2 with Pseudo R-squared, Model 1 vs 2: 0.070 vs 0.071 and Chi-squared: 12.732 df (1), p.value < .001 shows a minor improvement in the Pseudo R-squared from Model 1 to Model 2, indicating a slightly better fit in Model 2. The chi-squared value being significant (p < .001) for the comparison suggests that the change between models (likely the inclusion of `dollars` in Model 2) significantly improves the model's fit to the data.
+
+#### **Removing `owntaxprod`**
+
+```{python}
+lr.summary(main = False, test=['owntaxprod'])
+```
+
+##### **Model interpretation**
+
+Model 1 and Model 2 are logistic regression models predicting the binary outcome res_yes_no using different sets of explanatory variables. The primary difference between the models is the inclusion of `owntaxprod` in Model 2, which is not present in Model 1. Pseudo R-squared for Model 1 vs. Model 2: 0.071 vs. 0.071. This metric provides a measure of the explanatory power of the models, with values closer to 1 indicating a better fit. The identical Pseudo R-squared values for both models suggest that they have the same explanatory power, meaning the addition of `owntaxprod` in Model 2 does not improve the model's ability to explain the variability in the outcome res_yes_no.
+
+<br>Chi-squared: 8.694, df (1), p.value 0.003. This test compares the two models to determine if the addition of the `owntaxprod` variable in Model 2 significantly improves the model fit compared to Model 1. The chi-squared statistic is used to assess this, with the degrees of freedom (df) typically representing the difference in the number of parameters estimated between the two models. In this case, the df is 1, corresponding to the one additional variable in Model 2. The p-value of 0.003 indicates that the difference in fit between Model 1 and Model 2 is statistically significant at conventional significance levels (e.g., α = 0.05). Therefore, despite the Pseudo R-squared values being identical, the statistical test suggests that `owntaxprod` provides a significant contribution to predicting the outcome when it is added to the model.
+<br>
+
+Given these results, we would probably want to include `owntaxprod` in our model. However, some other factors we would want to consider are: 
+<ul>
+<li> Model complexity: Adding more variables can make the model more complex and potentially harder to interpret.</li>
+<li>Practical significance: Evaluate whether the inclusion of owntaxprod has practical significance in addition to its statistical significance.</li>
+<li>Cross-validation: Perform cross-validation to assess the generalizability of the model and avoid overfitting.</li>
+</ul>
+Further evaluation: Consider other metrics such as AUC, accuracy, precision, recall, and F1 score for a more comprehensive evaluation of model performance, especially in the context of the specific application or decision-making process the model is intended to support.
+
+#### **Check cross-validation**
+
+```{python}
+ct = rsm.basics.cross_tabs({'intuit75k' :train_data}, "zip_bins", "res1")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs({'intuit75k' :train_data}, "sex", "res1")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs({'intuit75k' :train_data}, "bizflag", "res1")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs({'intuit75k' :train_data}, "version1", "res1")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+ct = rsm.basics.cross_tabs({'intuit75k' :train_data}, "owntaxprod", "res1")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+pd.crosstab(
+    train_data["version1"],
+    train_data["upgraded"],
+    margins = True,
+    margins_name = "Total"
+).map(lambda x: "{:,}".format(x))
+```
+
+```{python}
+ct = rsm.basics.cross_tabs({'intuit75k' :train_data}, "upgraded", "res1")
+ct.summary(output = "perc_row")
+```
+
+```{python}
+reg = rsm.model.regress(
+    data = {"intuit75k": train_data},
+    rvar = "numords",
+    evar = 'res1'
+)
+reg.coef.round(3)
+```
+
+```{python}
+reg = rsm.model.regress(
+    data = {"intuit75k": train_data},
+    rvar = "dollars",
+    evar = 'res1'
+)
+reg.coef.round(3)
+```
+
+```{python}
+reg = rsm.model.regress(
+    data = {"intuit75k": train_data},
+    rvar = "last",
+    evar = 'res1'
+)
+reg.coef.round(3)
+```
+
+```{python}
+reg = rsm.model.regress(
+    data = {"intuit75k": train_data},
+    rvar = "sincepurch",
+    evar = 'res1'
+)
+reg.coef.round(3)
+```
+
+#### **Check the zip_bins**
+
+```{python}
+fig = rsm.prop_plot(train_data, "zip_bins", "res1", "Yes")
+```
+
+```{python}
+intuit75k['zip_bins'] = intuit75k['zip_bins'].astype('category')
+
+lr = rsm.logistic(
+    data = {'intuit75k': train_data},
+    rvar = "res1_yes",
+    evar = [
+        "zip_bins",
+        "bizflag",
+        "numords",
+        "dollars",
+        "last",
+        "sincepurch",
+        "sex",
+        "version1",
+        "owntaxprod",
+        "upgraded"
+    ]
+)
+lr.coef.round(3)
+```
+
+```{python}
+lr.plot("pred", incl = "zip_bins")
+```
+
+```{python}
+(
+    intuit75k.query("(training == 1) & (zip_bins == 1)")
+    .groupby("zip5")['res1_yes']
+    .agg(["mean", "sum", "count"])
+    .sort_values(by = "sum", ascending = False)[0:10]
+    .assign(mean = lambda x: x["mean"].apply(lambda y: f"{100 * y:.2f}%"))
+)
+```
+
+### Improve the model by adding dummies for zip 00801 and 00804
+
+```{python}
+intuit75k = intuit75k.assign(
+    zip801 = rsm.ifelse(intuit75k["zip5"] == "00801", 1, 0),
+    zip804 = rsm.ifelse(intuit75k["zip5"] == "00804", 1, 0),
+)
+```
+
+```{python}
+lr = rsm.model.logistic(
+    data = {"intuit75k": intuit75k.query("training == 1")},
+    rvar = "res1",
+    lev = "Yes",
+    evar = [
+        'zip_bins',
+        'sex',
+        'numords',
+        'bizflag',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'sincepurch',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804'
+    ]
+)
+lr.coef[30:].round(3)
+```
+
+```{python}
+lr.summary(main = False, fit = False, test = "zip_bins")
+```
+
+```{python}
+intuit75k["pred_logit"] = lr.predict(intuit75k)["prediction"]
+```
+
+```{python}
+dct = {"train": intuit75k[intuit75k.training == 1], "test": intuit75k[intuit75k.training == 0]}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_logit")
+```
+
+### Accuracy of Logistic Regression Model
+
+```{python}
+def accuracy(data, actual, predicted):
+    TP = FP = TN = FN = 0
+    for i, j in zip(actual, predicted):
+        if i == 1 and j == 1:
+            TP += 1
+        elif i == 0 and j == 1:
+            FP += 1
+        elif i == 0 and j == 0:
+            TN += 1
+        elif i == 1 and j == 0:
+            FN += 1
+        else:
+            pass
+    return (TN + TP) / (TN + TP + FN + FP)
+```
+
+## Neural Network Model
+
+Based on the output of the logistic regression models, we believe that employing a neural network model, that can account for underlying variable interactions, might be a better predictor than the logistic regression model. We first started by creating a simple neural network(NN) model that has 1 hidden layer with 1 node.
+
+### **NN with 1 Node and 1 Hidden Layer (all variables)**
+
+```{python}
+clf0 = rsm.model.mlp(
+    data = {'intuit75k': intuit75k.query('training == 1')},
+    rvar = 'res1_yes',
+    evar = [
+        'zip_bins',
+        'sex',
+        'numords',
+        'bizflag',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'sincepurch',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804'
+    ],
+    hidden_layer_sizes = (1,),
+    mod_type = 'classification'
+)
+clf0.summary()
+```
+
+```{python}
+intuit75k["pred_nn0"] = clf0.predict(intuit75k)["prediction"]
+```
+
+```{python}
+clf0.plot('vimp')
+```
+
+```{python}
+clf0.plot("pred")
+```
+
+```{python}
+dct = {"train": intuit75k[intuit75k.training == 1], "test": intuit75k[intuit75k.training == 0]}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn0")
+```
+
+### **NN with 1 Node and 1 Hidden Layer (significant variables)**
+
+```{python}
+clf1 = rsm.model.mlp(
+    data = {'wave1':intuit75k.query('training == 1')},
+    rvar = 'res1_yes',
+    evar = [
+        'zip_bins',
+        'sex',
+        'numords',
+        'bizflag',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'sincepurch',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804'
+    ],
+    hidden_layer_sizes = (1,),
+    mod_type = 'classification'
+)
+clf1.summary()
+```
+
+```{python}
+intuit75k["pred_nn1"] = clf1.predict(intuit75k)["prediction"]
+```
+
+```{python}
+clf1.plot('vimp')
+```
+
+The permutation importance plot reveals that the geographic segmentation `zip_bins`, the timing of the last event (last), and the upgrade status (upgraded) are the most influential factors in predicting the yes/no response variable in your Multi-layer Perceptron model. The importance of `zip_bins` suggests that location-based characteristics are crucial in the model's decision-making process. The prominence of last indicates that recent interactions or activities have a significant impact on the predictions, and the positive trend with upgraded implies that customers who have upgraded are more likely to yield a positive response.
+
+```{python}
+clf1.plot("pred")
+```
+
+The partial dependence plots show a nuanced view of feature influences. A steeper slope for the `zip_bins` plot underscores its importance, aligning with the permutation importance results. Other variables like `numords`, `dollars`, `version1`, `owntaxprod`, and upgraded appear to have a more muted effect on the model's output. Overall, the model's predictive behavior is mostly swayed by where the customer is located, with other factors playing secondary roles.
+
+We wanted to first create a base line neural network model. However, as we can see by the prediction plots, this nn model does not provide much in terms of the predictability based on various variables. We will want to build a neural network with more nodes and more hidden layers, and make our model a bit more flexible. 
+
+```{python}
+dct = {"train": intuit75k[intuit75k.training == 1], "test": intuit75k[intuit75k.training == 0]}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn1")
+```
+
+### **NN with hidden layers sizes: (2, )**
+
+```{python}
+clf2 = rsm.model.mlp(
+    data= {'wave1':intuit75k.query('training == 1')},
+    rvar="res1_yes",
+    evar=[
+        'zip_bins',
+        'bizflag',
+        'sex',
+        'sincepurch',
+        'numords',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804'
+    ],
+    hidden_layer_sizes=(2,),
+    mod_type="classification",
+)
+clf2.summary()
+```
+
+```{python}
+clf2.plot("vimp")
+```
+
+In the second neural network model, which now includes two hidden layers with one node each, the permutation importance plot indicates a shift in feature influence. `Zip_bins` retains its position as the most impactful feature, but upgraded has risen in importance, surpassing last, which was more significant in the first model. This suggests that the model is now giving more weight to the upgrade status of a customer when predicting the outcome. Features like `numords` and `version1` also contribute to the model's predictions, but to a lesser extent, while `dollars` and `owntaxprod` remain less influential.
+
+```{python}
+clf2.plot("pred")
+```
+
+```{python}
+intuit75k['pred_nn2'] = clf2.predict(intuit75k)['prediction']
+```
+
+```{python}
+dct = {"train": intuit75k[intuit75k.training == 1], "test": intuit75k[intuit75k.training == 0]}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn2")
+```
+
+The partial dependence plots offer a more detailed look into the relationships between each feature and the model's predictions. The `zip_bins` plot continues to show that lower bin values are associated with a higher probability of a positive response, reinforcing its top importance. The upgraded feature shows an upward trend, which aligns with its increased importance, suggesting that customers who have upgraded are more likely to have a positive response. Other features, such as `numords`, `last`, `version1`, and `owntaxprod`, show relatively flat trends, indicating a less significant effect on the prediction. These plots further confirm the model's reliance on geographical segmentation and upgrade status, while time since last activity has become relatively less important compared to the first model.
+
+As indicated by the prediction plots above, we see that by adding more hidden layers, our neural network become more flexible. However, the flexibility of the model can still be increased, and we will want to consider building an even more flexible model. 
+
+### **NN with 1 hidden layer and 3 nodes**
+
+```{python}
+clf3a = rsm.model.mlp(
+    data= {'wave1':intuit75k.query('training == 1')},
+    rvar="res1_yes",
+    evar=[
+        'zip_bins',
+        'bizflag',
+        'sex',
+        'sincepurch',
+        'numords',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804'
+    ],
+    hidden_layer_sizes=(3,),
+    mod_type="classification",
+)
+clf3a.summary()
+```
+
+```{python}
+clf3a.plot('vimp')
+```
+
+In the third model, which is a neural network with one hidden layer and three nodes, the permutation importance plot shows a slight rearrangement in feature importance. `Zip_bins` continues to be the leading factor, suggesting that geographic segmentation remains a key predictor in the model. The feature upgraded retains substantial importance, affirming its strong predictive power regarding the response variable. Interestingly, `version1` has increased in importance compared to the previous models, hinting that the specific version of a product or service is becoming more relevant in the model's predictions. `Last` and `numords` follow in importance, indicating they are useful but less decisive in influencing the model's outcome.
+
+```{python}
+clf3a.plot('pred')
+```
+
+The partial dependence plots reveal the following insights:
+
+- `Zip_bins` shows a sharp decline, indicating a strong relationship between lower bin values and the likelihood of a positive response.
+- The effect of `numords` is relatively flat, suggesting a limited influence on the predicted outcome.
+- The last feature shows a downward trend, implying that more recent interactions might correspond to a lower probability of a positive outcome, which is consistent with its position in the permutation importance plot.
+- The upgraded plot has an upward trend, reinforcing its role as an influential predictor, as higher values correlate with a greater likelihood of a positive outcome.
+
+The consistency of zip_bins and upgraded across all models as top predictors underlines their significance in determining the response variable. The rise of version1 in importance could indicate that the model is beginning to capture more nuanced patterns as the complexity of the network increases. However, features like `dollars` and `owntaxprod` remain less impactful, suggesting that they might not be as crucial for the model's decision-making process or that their effects are possibly being captured indirectly through interactions with other features.
+
+```{python}
+intuit75k['pred_nn3a'] = clf3a.predict(intuit75k)['prediction']
+```
+
+### **NN with 2 nodes and 10 hidden layers**
+
+```{python}
+clf10 = rsm.model.mlp(
+    data = {'wave1':intuit75k.query('training == 1')},
+    rvar = 'res1_yes',
+    evar = [
+        'zip_bins',
+        'sex',
+        'numords',
+        'bizflag',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'sincepurch',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804'
+    ],
+    hidden_layer_sizes = (10,10),
+    mod_type = 'classification'
+)
+clf10.summary()
+```
+
+```{python}
+clf10.plot('vimp')
+```
+
+```{python}
+clf10.plot('pred')
+```
+
+```{python}
+intuit75k['pred_nn10'] = clf10.predict(intuit75k)['prediction']
+```
+
+```{python}
+dct = {"train": intuit75k[intuit75k.training == 1], "test": intuit75k[intuit75k.training == 0]}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn10")
+```
+
+For the latest neural network model with two nodes in each of ten hidden layers, the summary and permutation importance plot provide insights into its learning process. This more complex model architecture did not converge, which suggests that the optimization algorithm (likely L-BFGS) was unable to find a solution that minimally satisfies the problem constraints within the iteration limit. This might be due to an insufficient number of iterations, a need for better scaling of input data, or an overly complex model for the given data.
+
+The permutation importance plot for this non-converged model indicates that zip_bins remains the most critical feature, followed by upgraded and last, which is consistent with previous models. This underscores the model's reliance on geographic data, upgrade status, and recent activity as key determinants of the predicted outcome. Other features such as numords, version1, and dollars continue to be relevant, but their impact on the model's predictions is less pronounced.
+
+Without convergence, however, the reliability of these importance scores might be compromised. It's also important to note that without a properly converged model, any interpretation of the feature importances and relationships should be taken with caution. Adjusting the model's parameters or preprocessing the input data could help achieve convergence and provide more reliable insights into the importance and effects of different features on the model's predictions.
+
+### **Evaluating Neural Network Performance from Gains Chart**
+
+```{python}
+intuit75k.head()
+```
+
+```{python}
+fig = rsm.gains_plot(intuit75k[intuit75k.training == 1],
+    "res1", "Yes",
+    ["pred_logit", "pred_nn0","pred_nn1", "pred_nn2", "pred_nn3a", "pred_nn10"])
+```
+
+The gains chart provided compares the performance of three predictive models: a logistic regression model (pred_logit) and two neural network models (pred_nn1 and pred_nn2). The chart plots the percentage of positive outcomes (buyers) captured against the percentage of the population targeted based on the model's predictions.
+
+All models perform above the diagonal line, which represents random chance; this indicates that each model has predictive power beyond mere guessing. The chart shows that the logistic regression and the first neural network model (pred_nn1) have similar performance, capturing nearly the same percentage of buyers across the population targeted. The second neural network model (pred_nn2) appears to perform slightly better, capturing a marginally higher percentage of buyers for most of the population percentages targeted. This suggests that pred_nn2 may have a more nuanced understanding of the data, possibly due to a more complex model structure, and is able to more accurately identify potential buyers.
+
+However, the differences between the models are not drastic, which implies that the complexity added in the neural network models may not be translating into significantly better performance over the logistic regression in this case. The closeness of their performances also suggests that the relationships within the data might be captured almost as effectively by the simpler logistic regression model as by the more complex neural network models.
+
+```{python}
+dct = {"train": intuit75k[intuit75k.training == 1], "test": intuit75k[intuit75k.training == 0]}
+fig = rsm.gains_plot(dct, "res1", "Yes", ["pred_logit"])
+```
+
+Both the training and test curves lie above the diagonal, indicating that the logistic regression model has learned to identify buyers more effectively than random chance. The closeness of the two lines suggests that the model generalizes well; it performs similarly on both the training data (seen data) and the test data (unseen data). This is indicative of a good model fit without overfitting, as overfitting would typically be revealed by a high performance on the training data but a significantly lower performance on the test data.
+
+The chart shows that as you target more of the population based on the model's predictions, you capture a higher percentage of buyers. Both lines show a relatively steady and linear increase, suggesting that the model ranks potential buyers effectively across the entire dataset. There's no sharp increase at the beginning, which would suggest that there's a subset of the population with a significantly higher likelihood of buying. Instead, the model's predictions are spread out across the population, capturing buyers at a fairly uniform rate as more of the population is targeted.
+
+```{python}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn0")
+```
+
+```{python}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn1")
+```
+
+```{python}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn2")
+```
+
+This gains chart displays the performance of the second neural network model (pred_nn2) on both the training and test datasets. The chart demonstrates that the model is effective at identifying buyers, as indicated by the curves lying well above the diagonal line representing random selection.
+
+The performance on the training data is very close to the performance on the test data, which suggests that the model generalizes well and is not overfitting. Overfitting would be indicated by a high performance on the training data but significantly worse performance on the test data. The fact that both curves are almost superimposed on each other indicates that the patterns the model has learned from the training data are applicable to the unseen test data.
+
+Additionally, the curves are steeper at the beginning, which means that targeting a smaller percentage of the population based on the model's predictions can capture a larger percentage of buyers. This is a desirable trait in a model used for prioritizing which segments of a population to target for marketing or intervention efforts. The model seems to rank potential buyers effectively, identifying those most likely to purchase early on as the population is targeted incrementally. This can be particularly valuable in applications where it is cost-effective to target only a subset of the entire population.
+
+### **Model Tuning**
+
+```{python}
+from sklearn.model_selection import GridSearchCV
+hls = [(1,), (2,), (3,), (3, 3), (4, 2), (5, 5)]
+
+param_grid = {"hidden_layer_sizes": hls}
+scoring = {"AUC": "roc_auc"}
+
+clf_cv = GridSearchCV(
+    clf0.fitted, param_grid, scoring=scoring, cv=5, n_jobs=4, refit="AUC", verbose=5
+)
+clf0.data_onehot.mean().round(3)
+clf0.data.res1_yes
+clf_cv.fit(clf0.data_onehot, clf0.data.res1_yes)
+```
+
+```{python}
+pd.DataFrame(clf_cv.cv_results_).iloc[:, 5:].sort_values("rank_test_AUC")
+```
+
+```{python}
+clf_cv.best_params_
+```
+
+### **Retrain model with hidden layers sizes: (3, 3)**
+
+```{python}
+clf3 = rsm.model.mlp(
+    data = {'wave1':intuit75k[intuit75k.training == 1]},
+    rvar="res1_yes",
+    evar= ['zip_bins',
+        'sex',
+        'numords',
+        'bizflag',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'sincepurch',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804' 
+    ],
+    hidden_layer_sizes = (3,3),
+    mod_type = 'classification'
+)
+clf3.summary()
+```
+
+An AUC (Area Under the ROC Curve) of 0.761 means that the model has a good ability to distinguish between the positive and negative classes. In other words, when the model predicts whether a new, unseen instance belongs to one class or the other, it is correct 76.1% of the time. 
+
+```{python}
+clf3.plot('vimp')
+```
+
+In this plot, zip_bins appears to be the most important feature, followed by upgraded and last. Numords and Version1 also have an impact on the model, but not as much as the preceding 3. The length of the bars indicates that zip_bins has the highest impact on model performance, whereas dollars and owntaxprod have the least impact among the shown features.
+
+```{python}
+intuit75k['pred_nn3'] = clf3.predict(intuit75k)['prediction']
+```
+
+```{python}
+dct = {"train": intuit75k[intuit75k.training == 1], "test": intuit75k[intuit75k.training == 0]}
+fig = rsm.gains_plot(dct, "res1", "Yes", "pred_nn3")
+```
+
+Both lines exhibit a steep curve towards the lower percentage of the population targeted, indicating that the model is effectively ranking buyers higher than non-buyers. The performance on the training set is better than on the test set, which is typical as models tend to perform better on the data they were trained on. However, since the test line follows closely to the training line, it suggests that the model generalizes well and is not overfitting significantly. 
+
+```{python}
+from sklearn import metrics
+
+# prediction on training set
+pred = intuit75k.loc[intuit75k.training == 1, "pred_nn3"]
+actual = intuit75k.loc[intuit75k.training == 1, "res1_yes"]
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+An AUC (Area Under the ROC Curve) of 0.761 means that the model has a good ability to distinguish between the positive and negative classes. In other words, when the model predicts whether a new, unseen instance belongs to one class or the other, it is correct 76.1% of the time. 
+
+```{python}
+# prediction on test set
+pred = intuit75k.loc[intuit75k.training == 0, "pred_nn3"]
+actual = intuit75k.loc[intuit75k.training == 0, "res1_yes"]
+fpr, tpr, thresholds = metrics.roc_curve(actual, pred)
+metrics.auc(fpr, tpr).round(3)
+```
+
+An AUC (Area Under the ROC Curve) of 0.755 means that the model has a good ability to distinguish between the positive and negative classes. In other words, when the model predicts whether a new, unseen instance belongs to one class or the other, it is correct 75.5% of the time. 
+
+The difference between the training AUC and the test AUC is 0.007, which is very small. This means that the model is not overfitting.
+
+```{python}
+fig = rsm.gains_plot(
+    intuit75k[intuit75k.training == 1],
+    "res1", "Yes",
+    ["pred_logit", "pred_nn3"]
+)
+```
+
+#### **Interpretation of model tuning**
+Both curves in the graphs are increasing and following a similar trends, which suggests that the models are likely effective at targeting buyers. The distance between the two curves suggests that the neural network model outperforming the logistic regression model.Let's try to improve the logistic regression model by checking the interactons between the variables.
+
+##### Interactions: version 1, numords and last
+
+```{python}
+clf3.plot('pred', incl = [], incl_int = ["last:version1", "numords:version1"])
+```
+
+```{python}
+lr.plot('pred', incl = [], incl_int = ["last:version1", "numords:version1"])
+```
+
+```{python}
+lr_int = rsm.model.logistic(
+    data = {'wave1':intuit75k.query('training == 1')},
+    rvar = 'res1_yes',
+    evar = [
+        'zip_bins',
+        'sex',
+        'numords',
+        'bizflag',
+        'dollars',
+        'last',
+        'owntaxprod',
+        'sincepurch',
+        'version1',
+        'upgraded',
+        'zip801',
+        'zip804'
+    ],
+    ivar = ["numords:version1", "last:version1"]
+)
+lr_int.summary()
+```
+
+The output shows the summary of a logistic regression model indicating that all included explanatory variables and their interactions (version1:zip_bins, zip_bins:upgraded, owntaxprod:zip_bins) are statistically significant in predicting the response variable res1_yes, with the model achieving an AUC of 0.717, which suggests a good predictive performance.
+
+```{python}
+intuit75k['pred_logit_int'] = lr_int.predict(intuit75k)['prediction']
+```
+
+```{python}
+fig = rsm.gains_plot(
+    intuit75k[intuit75k.training == 1],
+    "res1", "Yes",
+    ["pred_logit_int", "pred_nn2"]
+)
+```
+
+Both models show an increasing trend, meaning they are effectively ranking individuals more likely to be positive cases higher. The pred_logit_int model performs slightly better than pred_nn3, particularly at lower percentages of the population targeted, indicating a more efficient prioritization of likely positive cases by the logistic regression model with interactions (pred_logit_int).
+
+### **Calculating the Accuracy of the models**
+
+```{python}
+def classification(actual, predicted):
+    TP = FP = TN = FN = 0
+    for i, j in zip(actual, predicted):
+        if i == 1 and j == 1:
+            TP += 1
+        elif i == 0 and j == 1:
+            FP += 1
+        elif i == 0 and j == 0:
+            TN += 1
+        elif i == 1 and j == 0:
+            FN += 1
+    metrics = {
+        "Accuracy": (TN + TP) / (TN + TP + FN + FP) if (TN + TP + FN + FP) else 0, 
+        "Precision": TP / (TP + FP) if (TP + FP) else 0,
+        "Recall": TP / (TP + FN) if (TP + FN) else 0
+    }
+    return metrics
+
+def prediction_metrics(data, models, predictions, break_even):
+    results = []
+    for model, prediction in zip(models, predictions):
+        data['prediction'] = [1 if i > break_even else 0 for i in data[prediction]]
+        actual = data['res1_yes']
+        predicted = data['prediction']
+        metrics = classification(actual, predicted)
+        metrics['Model'] = model  # Add model name to metrics
+        results.append(metrics)
+    column_order = ['Model', 'Accuracy', 'Precision', 'Recall']
+    results_df = pd.DataFrame(results, columns=column_order)
+    return results_df
+
+```
+
+```{python}
+# Find break even
+cost = 1.41
+margin = 60
+break_even = cost / margin
+break_even
+```
+
+```{python}
+test_data = intuit75k[intuit75k.training == 0]
+true_response = test_data['res1_yes']
+
+
+# Run the function accross all models and predictions
+models = ["logit", "nn0", "nn1", "nn2", "nn3a", "nn10"]
+predictions = [
+    "pred_logit",
+    "pred_nn0",
+    "pred_nn1",
+    "pred_nn2",
+    "pred_nn3a",
+    "pred_nn10",
+    "pred_logit_int",
+]
+```
+
+```{python}
+pred_metrics = prediction_metrics(test_data, models,predictions, break_even)
+pred_metrics
+```
+
+## Calculate the profit of each model
+
+Note that in wave 2, every response probability is only 50%
+
+```{python}
+for prediction in predictions:
+    test_data[f'mailto_wave2_{prediction}'] = test_data[prediction] > break_even
+
+
+def calculate_performance(dat, models, predictions, perf = "res1_yes", break_even = break_even, lev=1):
+    results = []
+    for model, prediction in zip(models, predictions):
+        # Use the boolean column indicating if prediction is above break_even
+        boolean_column = f'mailto_wave2_{prediction}'
+        mail_to_rate = len(dat[dat[boolean_column]]) / len(dat)
+        response_rate = (len(dat[(dat[boolean_column]) & (dat[perf] == lev)]) / len(dat[dat[boolean_column]]))/2 if len(dat[dat[boolean_column]]) else 0
+        nr_mail = 763334 * mail_to_rate
+        mail_cost = 1.4 * nr_mail
+        revenue = 60 * nr_mail * response_rate
+        expected_profit = revenue - mail_cost
+        expected_ROME = expected_profit / mail_cost if mail_cost else 0
+        results.append({
+            "model": model,
+            "profit": expected_profit,
+            "ROME": expected_ROME,
+            "mail_to_rate": mail_to_rate,
+            "response_rate": response_rate
+        })
+    
+    return pd.DataFrame(results)
+
+
+performance_data = calculate_performance(test_data, models, predictions, perf = "res1_yes", break_even = break_even, lev=1)
+performance_data
+```
+
+## Calculate the profit, which is scale to 801821 - 38487 = 763334 businesses
+
+```{python}
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.rcParams['font.family'] = 'serif'  # e.g., 'Times New Roman', 'Arial', 'Serif'
+plt.rcParams['font.size'] = 12
+plt.figure(figsize=(12, 8))
+plt.clf()
+ax = sns.barplot(x="model", y="profit", data=performance_data, palette="inferno")
+ax.set(xlabel="Model Type", ylabel="Profit ($)")
+ax.set_title('Model Performance by Profit', fontsize=16, fontweight='bold')
+
+for p in ax.patches:
+    ax.text(p.get_x() + p.get_width() / 2., (p.get_height() - 1), f"${int(p.get_height()):,}", 
+            ha='center', va='bottom', color='black')
+
+plt.show()
+```
+
+```{python}
+plt.rcParams['font.family'] = 'serif'  # e.g., 'Times New Roman', 'Arial', 'Serif'
+plt.rcParams['font.size'] = 10
+plt.figure(figsize=(12, 8))
+plt.clf()
+ax = sns.barplot(x="model", y="ROME", data=performance_data, palette="inferno")
+ax.set(xlabel="Model Type", ylabel="ROME (%)")
+ax.set_title('Model Performance by ROME', fontsize=16, fontweight='bold')
+
+for p in ax.patches:
+    ax.text(p.get_x() + p.get_width() / 2., (p.get_height()), f"{(p.get_height()):.2f}%", 
+            ha='center', va='bottom', color='black')
+
+plt.show()
+```
+
+Based on the results above, the profit of NN3 is highest, this means that the NN3 model is the best model to use in this case.
+
