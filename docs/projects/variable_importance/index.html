@@ -184,13 +184,18 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#pearson-correlations" id="toc-pearson-correlations" class="nav-link active" data-scroll-target="#pearson-correlations">Pearson Correlations</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#data-overview" id="toc-data-overview" class="nav-link" data-scroll-target="#data-overview">Data Overview</a></li>
+  <li><a href="#summary-of-metrics" id="toc-summary-of-metrics" class="nav-link" data-scroll-target="#summary-of-metrics">Summary of Metrics</a></li>
+  <li><a href="#pearson-correlations" id="toc-pearson-correlations" class="nav-link" data-scroll-target="#pearson-correlations">Pearson Correlations</a></li>
   <li><a href="#polychoric-correlations" id="toc-polychoric-correlations" class="nav-link" data-scroll-target="#polychoric-correlations">Polychoric Correlations</a></li>
   <li><a href="#standardized-regression-coefficients" id="toc-standardized-regression-coefficients" class="nav-link" data-scroll-target="#standardized-regression-coefficients">Standardized Regression Coefficients</a></li>
   <li><a href="#shapley-values" id="toc-shapley-values" class="nav-link" data-scroll-target="#shapley-values">Shapley values</a></li>
   <li><a href="#johnson-relative" id="toc-johnson-relative" class="nav-link" data-scroll-target="#johnson-relative">Johnson Relative</a></li>
   <li><a href="#mean-decrease-in-gini-coefficient" id="toc-mean-decrease-in-gini-coefficient" class="nav-link" data-scroll-target="#mean-decrease-in-gini-coefficient">Mean Decrease in Gini Coefficient</a></li>
   <li><a href="#xgboost-feature-importance" id="toc-xgboost-feature-importance" class="nav-link" data-scroll-target="#xgboost-feature-importance">XGBoost Feature Importance</a></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
   </ul>
 </nav>
     </div>
@@ -228,15 +233,18 @@ window.Quarto = {
 </header>
 
 
-<div class="justify">
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
 <p>Key Driver Analysis (KDA) is a statistical technique used to determine the factors (or “drivers”) that most significantly impact a particular outcome or dependent variable. It is commonly used in fields like marketing, customer satisfaction, product development, and human resources to understand what influences key outcomes such as customer satisfaction, employee engagement, or product success.</p>
 <p>This post implements a few measure of variable importance, interpreted as a key drivers analysis, for certain aspects of a payment card on customer satisfaction with that payment card. This involves calculating pearson correlations, standardized regression coefficients, “usefulness”, Shapley values for a linear regression, Johnson’s relative weights, and the mean decrease in the gini coefficient from a random forest.</p>
+</section>
+<section id="data-overview" class="level2">
+<h2 class="anchored" data-anchor-id="data-overview">Data Overview</h2>
 <p>First of all, let’s have some data overview:</p>
-</div>
-<div id="32681918" class="cell" data-execution_count="2">
+<div id="a26688a6" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pd.read_csv(<span class="st">'data_for_drivers_analysis.csv'</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="32">
+<div class="cell-output cell-output-display" data-execution_count="2">
 <div>
 <div>
 
@@ -433,13 +441,13 @@ window.Quarto = {
 </div>
 </div>
 </div>
-<div id="1bc0c288" class="cell" data-execution_count="3">
+<div id="79a38d56" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate summary statistics for the dataset</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>summary_statistics <span class="op">=</span> data.describe()</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the summary statistics</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>summary_statistics</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="33">
+<div class="cell-output cell-output-display" data-execution_count="3">
 <div>
 <div>
 
@@ -602,18 +610,20 @@ window.Quarto = {
 <li>Provides outstanding customer service</li>
 <li>Makes a difference in my life</li>
 </ol>
-<p>To implement measures of variable importance, interpreted as a key drivers analysis, the process will include:</p>
+</section>
+<section id="summary-of-metrics" class="level2">
+<h2 class="anchored" data-anchor-id="summary-of-metrics">Summary of Metrics</h2>
+<p>To implement measures of variable importance, interpreted as a key drivers analysis, the process will include metrics:</p>
 <ul>
-<li>Pearson Correlations: Useful for identifying the strength and direction of a linear relationship between a predictor and the target variable.</li>
-<li>Standardized Regression Coefficents: Helps in understanding the impact of each predictor in terms of standard deviations of the outcome variable.</li>
-<li>Shapley Values: Useful for interpreting complex models and understanding the contribution of each feature to the prediction.</li>
-<li>Permutation Importance: Useful for assessing feature importance in any predictive model.</li>
-<li>Johnson’s Relative Weights: Helps in understanding the proportionate contribution of each predictor in explaining the variance of the dependent variable.</li>
-<li>Mean Decrease in Gini Coefficient: Commonly used in tree-based models to indicate how much each feature contributes to reducing uncertainty.</li>
-<li>XGBoost Feature Importance: Provides multiple metrics for understanding the contribution of features in boosting models.</li>
+<li>Pearson Correlation: Measures the linear relationship between each perception and satisfaction.</li>
+<li>Polychoric Correlation: Estimates the correlation between two theorized normally distributed continuous latent variables from observed ordinal variables.</li>
+<li>Standardized Coefficient: The coefficients from a linear regression model standardized to have unit variance.</li>
+<li>Shapley Values: Measure the contribution of each feature to the model’s prediction averaged over all possible combinations of features.</li>
+<li>Johnson’s Epsilon: Reflects the relative importance of predictors adjusted for multicollinearity. = Mean Decrease in Gini Coefficient: Reflects the importance of each feature in reducing impurity in a Random Forest model.</li>
+<li>XGBoost: Feature importance from the XGBoost model, based on how useful each feature is in reducing the objective function’s error.</li>
 </ul>
 <p>First of all, let’s do some preparation for the model:</p>
-<div id="926c8e75" class="cell" data-execution_count="4">
+<div id="b8a3d512" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Assign X as individual variables in regression</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>X_list <span class="op">=</span> [<span class="st">'trust'</span>, <span class="st">'build'</span>, <span class="st">'differs'</span>, <span class="st">'easy'</span>, <span class="st">'appealing'</span>, <span class="st">'rewarding'</span>, <span class="st">'popular'</span>, <span class="st">'service'</span>, <span class="st">'impact'</span>]</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -622,6 +632,7 @@ window.Quarto = {
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Assign y as dependent variables in regression</span></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> data[<span class="st">'satisfaction'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
 <section id="pearson-correlations" class="level2">
 <h2 class="anchored" data-anchor-id="pearson-correlations">Pearson Correlations</h2>
 <p>The formula for calculating the Pearson correlation coefficient 𝑟 is:</p>
@@ -632,7 +643,7 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <p>1: A perfect positive linear relationship</p>
 <p>-1: A perfect negative linear relationship</p>
 <p>0: No linear relationship</p>
-<div id="2ad5d72c" class="cell" data-execution_count="5">
+<div id="e8bd118b" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create correlation matrix</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>correlation_matrix <span class="op">=</span> X.corrwith(y)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -646,8 +657,9 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Perception'</span>: pearson_correlations.index,</span>
 <span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Pearson_Correlation'</span>: pearson_correlations.values</span>
 <span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>pearson_correlations_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="35">
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>pearson_correlations_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
 <div>
 <div>
 
@@ -720,9 +732,15 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <p>The polychoric correlation () can be estimated using: <span class="math display">\[
 \rho = \frac{\sum_{i=1}^{n} \sum_{j=1}^{m} (o_{ij} - e_{ij})^2 / e_{ij}}{\sqrt{\sum_{i=1}^{n} (o_{i+} - e_{i+})^2 / e_{i+} \sum_{j=1}^{m} (o_{+j} - e_{+j})^2 / e_{+j}}}
 \]</span></p>
-<p>Where: - <span class="math inline">\({o_{ij}}\)</span> is the observed frequency for the cell in row <span class="math inline">\({i}\)</span> and column <span class="math inline">\({j}\)</span>. - <span class="math inline">\({e_{ij}}\)</span> is the expected frequency under the assumption of independence. - <span class="math inline">\({o_{i+}}\)</span> and <span class="math inline">\({o_{+j}}\)</span> are the marginal totals for row <span class="math inline">\({i}\)</span> and column <span class="math inline">\({j}\)</span>. - <span class="math inline">\({e_{i+}}\)</span> and <span class="math inline">\({e_{+j}}\)</span> are the expected marginal totals for row <span class="math inline">\({i}\)</span> and column <span class="math inline">\({j}\)</span>.</p>
-<p>To enhance the process, we use polycor library from R then transfrom them to python code:</p>
-<div id="e0f61174" class="cell" data-execution_count="6">
+<p>Where:</p>
+<ul>
+<li><p><span class="math inline">\({o_{ij}}\)</span> is the observed frequency for the cell in row <span class="math inline">\({i}\)</span> and column <span class="math inline">\({j}\)</span>.</p></li>
+<li><p><span class="math inline">\({e_{ij}}\)</span> is the expected frequency under the assumption of independence.</p></li>
+<li><p><span class="math inline">\({o_{i+}}\)</span> and <span class="math inline">\({o_{+j}}\)</span> are the marginal totals for row <span class="math inline">\({i}\)</span> and column <span class="math inline">\({j}\)</span>.</p></li>
+<li><p><span class="math inline">\({e_{i+}}\)</span> and <span class="math inline">\({e_{+j}}\)</span> are the expected marginal totals for row <span class="math inline">\({i}\)</span> and column <span class="math inline">\({j}\)</span>.</p></li>
+</ul>
+<p>To enhance the process, we use polycor library from R then transform them to python code:</p>
+<div id="bc16c1da" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Activate the pandas2ri conversion</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>pandas2ri.activate()</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -749,19 +767,22 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    r_corr <span class="op">=</span> polychoric_corr(y, data[col])</span>
 <span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    correlation.append(r_corr[<span class="dv">0</span>])</span>
 <span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>total <span class="op">=</span> <span class="bu">sum</span>(correlation)</span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>correlation <span class="op">=</span> [value <span class="op">/</span> total <span class="cf">for</span> value <span class="kw">in</span> correlation]</span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert correlations to a pandas DataFrame</span></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>poly_corr_df <span class="op">=</span> pd.DataFrame({</span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Perception'</span>: X_list,</span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Polychoric Correlation'</span>: correlation</span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>poly_corr_df[<span class="st">'Polychoric Correlation'</span>] <span class="op">=</span> (poly_corr_df[<span class="st">'Polychoric Correlation'</span>]<span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="bu">str</span>) <span class="op">+</span> <span class="st">'%'</span></span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>poly_corr_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="36">
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalize correlations</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>total <span class="op">=</span> <span class="bu">sum</span>(correlation)</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>correlation <span class="op">=</span> [value <span class="op">/</span> total <span class="cf">for</span> value <span class="kw">in</span> correlation]</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert correlations to a pandas DataFrame</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>poly_corr_df <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Perception'</span>: X_list,</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Polychoric Correlation'</span>: correlation</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="co"># Reformat the column</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>poly_corr_df[<span class="st">'Polychoric Correlation'</span>] <span class="op">=</span> (poly_corr_df[<span class="st">'Polychoric Correlation'</span>]<span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="bu">str</span>) <span class="op">+</span> <span class="st">'%'</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>poly_corr_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
 <div>
 <div>
 
@@ -836,7 +857,7 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 \]</span></p>
 <p>where <span class="math inline">\({b_j}\)</span> is the unstandardized regression coefficient, <span class="math inline">\({\sigma_{X_j}}\)</span> is the standard deviation of <span class="math inline">\({X_j}\)</span> , and <span class="math inline">\({\sigma_Y}\)</span> is the standard deviation of the outcome variable <span class="math inline">\({Y}\)</span>.</p>
 <p>These are the coefficients obtained from a regression model after standardizing the variables (i.e., converting them to a common scale). This allows for comparison of the relative importance of each predictor.</p>
-<div id="d879e22a" class="cell" data-execution_count="7">
+<div id="bc6e3cba" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Fitting the linear regression model</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> LinearRegression()</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>model.fit(X, y)</span>
@@ -854,11 +875,11 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>coefficients_df[<span class="st">'Standardized Coefficient'</span>] <span class="op">/=</span> coefficients_df[<span class="st">'Standardized Coefficient'</span>].<span class="bu">sum</span>()</span>
 <span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to percentage format</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>coefficients_df[<span class="st">'Standardized Coefficient'</span>] <span class="op">=</span> (coefficients_df[<span class="st">'Standardized Coefficient'</span>] <span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="bu">str</span>) <span class="op">+</span> <span class="st">'%'</span></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>coefficients_df.set_index(<span class="st">'Perception'</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>coefficients_df[<span class="st">'Standardized Coefficient'</span>] <span class="op">=</span> (</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    coefficients_df[<span class="st">'Standardized Coefficient'</span>] <span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="bu">str</span>) <span class="op">+</span> <span class="st">'%'</span></span>
 <span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>coefficients_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="37">
+<div class="cell-output cell-output-display" data-execution_count="7">
 <div>
 <div>
 
@@ -867,48 +888,54 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">Standardized Coefficient</th>
-</tr>
-<tr class="odd">
 <th data-quarto-table-cell-role="th">Perception</th>
-<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Standardized Coefficient</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">trust</td>
+<td data-quarto-table-cell-role="th">0</td>
+<td>trust</td>
 <td>24.8%</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">build</td>
+<td data-quarto-table-cell-role="th">1</td>
+<td>build</td>
 <td>4.3%</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">differs</td>
+<td data-quarto-table-cell-role="th">2</td>
+<td>differs</td>
 <td>6.3%</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">easy</td>
+<td data-quarto-table-cell-role="th">3</td>
+<td>easy</td>
 <td>4.7%</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">appealing</td>
+<td data-quarto-table-cell-role="th">4</td>
+<td>appealing</td>
 <td>7.3%</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">rewarding</td>
+<td data-quarto-table-cell-role="th">5</td>
+<td>rewarding</td>
 <td>1.1%</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">popular</td>
+<td data-quarto-table-cell-role="th">6</td>
+<td>popular</td>
 <td>3.6%</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">service</td>
+<td data-quarto-table-cell-role="th">7</td>
+<td>service</td>
 <td>18.9%</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">impact</td>
+<td data-quarto-table-cell-role="th">8</td>
+<td>impact</td>
 <td>29.1%</td>
 </tr>
 </tbody>
@@ -926,8 +953,13 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <p>The Shapley value for a feature <span class="math inline">\({j}\)</span> is given by: <span class="math display">\[
 \phi_j = \sum_{S \subseteq N \setminus \{j\}} \frac{|S|!(|N| - |S| - 1)!}{|N|!} \left[ v(S \cup \{j\}) - v(S) \right]
 \]</span></p>
-<p>where <span class="math inline">\({N}\)</span> is the set of all features, <span class="math inline">\({S}\)</span> is a subset of <span class="math inline">\({N}\)</span> excluding <span class="math inline">\({j}\)</span>, and <span class="math inline">\({v(S)}\)</span> is the value function (e.g., model performance) for subset <span class="math inline">\({S}\)</span>.</p>
-<div id="120c671a" class="cell" data-execution_count="8">
+<p>Where:</p>
+<ul>
+<li><p><span class="math inline">\({N}\)</span> is the set of all features</p></li>
+<li><p><span class="math inline">\({S}\)</span> is a subset of <span class="math inline">\({N}\)</span> excluding <span class="math inline">\({j}\)</span></p></li>
+<li><p><span class="math inline">\({v(S)}\)</span> is the value function (e.g., model performance) for subset <span class="math inline">\({S}\)</span>.</p></li>
+</ul>
+<div id="b8ecbd8c" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shap</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> LinearRegression()</span>
@@ -950,8 +982,9 @@ r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x
 <span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Shapley Values'</span>: shap_values_mean.values</span>
 <span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>})</span>
 <span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>shap_values_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="38">
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>shap_values_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
 <div>
 <div>
 
@@ -1028,7 +1061,7 @@ RW_j = \sum_{k=1}^{p} \left( \frac{\lambda_{jk}^2 \cdot \text{Var}(Z_k)}{\text{V
 <p><span class="math inline">\({\lambda_{jk}}\)</span> is the loading of predictor <span class="math inline">\({j}\)</span> on the <span class="math inline">\({k}\)</span>-th principal component</p>
 <p><span class="math inline">\({\text{Var}(Z_k)}\)</span> is the variance of the <span class="math inline">\({k}\)</span>-th principal component</p>
 <p><span class="math inline">\({\text{Var}(Y)}\)</span> is the variance of the outcome variable.</p>
-<div id="b23cb334" class="cell" data-execution_count="9">
+<div id="c4b11d45" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform relative weights analysis</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>johnsons_eps <span class="op">=</span> relativeImp(data, outcomeName<span class="op">=</span> <span class="st">'satisfaction'</span>, driverNames <span class="op">=</span> X_list)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1041,8 +1074,9 @@ RW_j = \sum_{k=1}^{p} \left( \frac{\lambda_{jk}^2 \cdot \text{Var}(Z_k)}{\text{V
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Reformat the columns</span></span>
 <span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>johnsons_eps[<span class="st">"Johnson's Epsilon"</span>] <span class="op">=</span> johnsons_eps[<span class="st">"Johnson's Epsilon"</span>].<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="st">'str'</span>) <span class="op">+</span> <span class="st">"%"</span></span>
 <span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>johnsons_eps</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="39">
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>johnsons_eps</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
 <div>
 <div>
 
@@ -1114,8 +1148,13 @@ RW_j = \sum_{k=1}^{p} \left( \frac{\lambda_{jk}^2 \cdot \text{Var}(Z_k)}{\text{V
 <p>In Random Forests, the Gini importance (or Mean Decrease in Gini) is calculated based on the average decrease in impurity (Gini impurity) brought by each feature to the nodes in the trees.</p>
 <p>The Mean Decrease in Gini for a feature <span class="math inline">\({j}\)</span> is: <span class="math display">\[
 \text{MDG}_j = \frac{1}{T} \sum_{t=1}^{T} \left( \Delta Gini(t, j) \right)
-\]</span> where <span class="math inline">\({T}\)</span> is the total number of trees, and <span class="math inline">\({\Delta Gini(t, j)}\)</span> is the decrease in Gini impurity for tree <span class="math inline">\({t}\)</span> due to feature <span class="math inline">\({j}\)</span>.</p>
-<div id="39db2dba" class="cell" data-execution_count="10">
+\]</span></p>
+<p>Where:</p>
+<ul>
+<li><p><span class="math inline">\({T}\)</span> is the total number of trees</p></li>
+<li><p><span class="math inline">\({\Delta Gini(t, j)}\)</span> is the decrease in Gini impurity for tree <span class="math inline">\({t}\)</span> due to feature <span class="math inline">\({j}\)</span>.</p></li>
+</ul>
+<div id="5a92c0cf" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">42</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit Random Forest model</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>rf_model <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">50</span>,max_depth<span class="op">=</span><span class="dv">8</span>)</span>
@@ -1124,18 +1163,19 @@ RW_j = \sum_{k=1}^{p} \left( \frac{\lambda_{jk}^2 \cdot \text{Var}(Z_k)}{\text{V
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Get Mean Decrease in Gini Coefficient (feature importances)</span></span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>rf_importances <span class="op">=</span> pd.Series(rf_model.feature_importances_, index<span class="op">=</span>X.columns)</span>
 <span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>rf_importances <span class="op">/=</span> rf_importances.<span class="bu">sum</span>()</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co"># rf_importances /= rf_importances.sum()</span></span>
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>rf_importances_df <span class="op">=</span> pd.DataFrame({</span>
 <span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Perception'</span>: rf_importances.index,</span>
 <span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Mean Decrease in Gini Coefficient'</span>: rf_importances.values</span>
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>})</span>
 <span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>rf_importances_df[<span class="st">'Mean Decrease in Gini Coefficient'</span>] <span class="op">=</span> (rf_importances_df[<span class="st">'Mean Decrease in Gini Coefficient'</span>]<span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="bu">str</span>) <span class="op">+</span> <span class="st">'%'</span></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the feature importances</span></span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>rf_importances_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="40">
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>rf_importances_df[<span class="st">'Mean Decrease in Gini Coefficient'</span>] <span class="op">=</span> (</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    rf_importances_df[<span class="st">'Mean Decrease in Gini Coefficient'</span>]<span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="bu">str</span>) <span class="op">+</span> <span class="st">'%'</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the feature importances</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>rf_importances_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
 <div>
 <div>
 
@@ -1223,8 +1263,274 @@ RW_j = \sum_{k=1}^{p} \left( \frac{\lambda_{jk}^2 \cdot \text{Var}(Z_k)}{\text{V
 <p><span class="math display">\[
 \text{Gain}_j = \sum_{t=1}^{T} \sum_{n \in t} \frac{I(n = j) \cdot \text{gain}(n)}{\sum_{n' \in t} \text{gain}(n')}
 \]</span></p>
-<p><em>todo: replicate the table on slide 19 of the session 4 slides. This involves calculating pearson correlations, standardized regression coefficients, “usefulness”, Shapley values for a linear regression, Johnson’s relative weights, and the mean decrease in the gini coefficient from a random forest. You may use packages built into R or Python.</em></p>
-<p><em>If you want a challenge, either (1) implement one or more of the measures yourself. “Usefulness” is rather easy to program up. Shapley values for linear regression are a bit more work. Or (2) add additional measures to the table such as the importance scores from XGBoost.</em></p>
+<div id="f4c10108" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Shift the classes in the target variable to start from 0</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>y_shifted <span class="op">=</span> y <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Train the XGBoost model with the shifted target variable</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>xgb_model <span class="op">=</span> xgb.XGBClassifier()</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>xgb_model.fit(X, y_shifted)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Get feature importances from the XGBoost model</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>xgb_importances <span class="op">=</span> pd.Series(xgb_model.feature_importances_, index<span class="op">=</span>X.columns)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>xgb_importances_df <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Perception'</span>: xgb_importances.index,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">'XGBoost'</span>: xgb_importances.values</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>xgb_importances_df[<span class="st">'XGBoost'</span>] <span class="op">=</span> (</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    xgb_importances_df[<span class="st">'XGBoost'</span>]<span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">1</span>).astype(<span class="bu">str</span>) <span class="op">+</span> <span class="st">'%'</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the feature importances</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>xgb_importances_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Perception</th>
+<th data-quarto-table-cell-role="th">XGBoost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>trust</td>
+<td>15.1%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>build</td>
+<td>9.1%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>differs</td>
+<td>11.0%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>easy</td>
+<td>9.5%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>appealing</td>
+<td>9.9%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">5</td>
+<td>rewarding</td>
+<td>8.8%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6</td>
+<td>popular</td>
+<td>10.2%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">7</td>
+<td>service</td>
+<td>10.7%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">8</td>
+<td>impact</td>
+<td>15.8%</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="results" class="level2">
+<h2 class="anchored" data-anchor-id="results">Results</h2>
+<p>Now combine all results together:</p>
+<div id="43c693b0" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create dataframe list</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>dataframes <span class="op">=</span> [</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    pearson_correlations_df, </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    poly_corr_df, coefficients_df, </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    shap_values_df, </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    johnsons_eps, </span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    rf_importances_df, </span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    xgb_importances_df] </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge all dataframe</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>table <span class="op">=</span> <span class="bu">reduce</span>(<span class="kw">lambda</span> left,right: pd.merge(left,right,on<span class="op">=</span><span class="st">'Perception'</span>), dataframes)</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Perception</th>
+<th data-quarto-table-cell-role="th">Pearson_Correlation</th>
+<th data-quarto-table-cell-role="th">Polychoric Correlation</th>
+<th data-quarto-table-cell-role="th">Standardized Coefficient</th>
+<th data-quarto-table-cell-role="th">Shapley Values</th>
+<th data-quarto-table-cell-role="th">Johnson's Epsilon</th>
+<th data-quarto-table-cell-role="th">Mean Decrease in Gini Coefficient</th>
+<th data-quarto-table-cell-role="th">XGBoost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>trust</td>
+<td>13.3%</td>
+<td>12.9%</td>
+<td>24.8%</td>
+<td>26.7%</td>
+<td>19.8%</td>
+<td>10.5%</td>
+<td>15.1%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>build</td>
+<td>10.0%</td>
+<td>9.9%</td>
+<td>4.3%</td>
+<td>4.5%</td>
+<td>6.6%</td>
+<td>11.4%</td>
+<td>9.1%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>differs</td>
+<td>9.6%</td>
+<td>10.0%</td>
+<td>6.3%</td>
+<td>5.6%</td>
+<td>7.0%</td>
+<td>10.8%</td>
+<td>11.0%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>easy</td>
+<td>11.1%</td>
+<td>10.9%</td>
+<td>4.7%</td>
+<td>5.1%</td>
+<td>8.2%</td>
+<td>10.6%</td>
+<td>9.5%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>appealing</td>
+<td>10.8%</td>
+<td>10.6%</td>
+<td>7.3%</td>
+<td>7.6%</td>
+<td>8.3%</td>
+<td>11.6%</td>
+<td>9.9%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">5</td>
+<td>rewarding</td>
+<td>10.1%</td>
+<td>10.1%</td>
+<td>1.1%</td>
+<td>1.1%</td>
+<td>6.0%</td>
+<td>11.9%</td>
+<td>8.8%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6</td>
+<td>popular</td>
+<td>8.9%</td>
+<td>8.9%</td>
+<td>3.6%</td>
+<td>3.8%</td>
+<td>5.4%</td>
+<td>12.1%</td>
+<td>10.2%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">7</td>
+<td>service</td>
+<td>13.0%</td>
+<td>13.0%</td>
+<td>18.9%</td>
+<td>19.9%</td>
+<td>16.6%</td>
+<td>10.9%</td>
+<td>10.7%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">8</td>
+<td>impact</td>
+<td>13.2%</td>
+<td>13.8%</td>
+<td>29.1%</td>
+<td>25.5%</td>
+<td>22.0%</td>
+<td>10.2%</td>
+<td>15.8%</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</div>
+<p><strong>Interpretation by Perception</strong></p>
+<p><strong>1. Is offered by a brand I trust:</strong></p>
+<p>Highest importance across multiple metrics: Pearson Correlation (13.3%), Standardized Coefficient (24.8%), Shapley Values (26.7%), Johnson’s Epsilon (19.8%), XGBoost (15.1%).</p>
+<p>Conclusion: This is consistently identified as a key driver of satisfaction across different methods.</p>
+<p><strong>2. Helps build credit quickly:</strong></p>
+<p>Moderate importance: Pearson Correlation (10.0%), Standardized Coefficient (4.3%), Shapley Values (4.5%), Johnson’s Epsilon (6.6%), Mean Decrease in Gini (11.4%).</p>
+<p>Conclusion: Important, but less so than “trust”.</p>
+<p><strong>3. Is different from other cards:</strong></p>
+<p>Moderate to lower importance: Pearson Correlation (9.6%), Standardized Coefficient (6.3%), Shapley Values (5.6%), Johnson’s Epsilon (7.0%).</p>
+<p>Conclusion: Also important, but not a top driver.</p>
+<p><strong>4. Is easy to use:</strong></p>
+<p>Moderate importance: Pearson Correlation (11.1%), Standardized Coefficient (4.7%), Shapley Values (5.1%), Johnson’s Epsilon (8.2%).</p>
+<p>Conclusion: Important, but consistently less so than “trust”.</p>
+<p><strong>5. Has appealing benefits or rewards:</strong></p>
+<p>Moderate importance: Pearson Correlation (10.8%), Standardized Coefficient (7.3%), Shapley Values (7.6%), Johnson’s Epsilon (8.3%).</p>
+<p>Conclusion: Consistently important across all measures.</p>
+<p><strong>6. Rewards me for responsible usage:</strong></p>
+<p>Lower importance: Pearson Correlation (10.1%), Standardized Coefficient (1.1%), Shapley Values (1.1%), Johnson’s Epsilon (6.0%).</p>
+<p>Conclusion: Generally less important compared to other perceptions.</p>
+<p><strong>7. Is used by a lot of people:</strong></p>
+<p>Lower to moderate importance: Pearson Correlation (8.9%), Standardized Coefficient (3.6%), Shapley Values (3.8%), Johnson’s Epsilon (5.4%), Mean Decrease in Gini (12.1%).</p>
+<p>Conclusion: Less critical than other factors.</p>
+<p><strong>8. Provides outstanding customer service:</strong></p>
+<p>High importance: Pearson Correlation (13.0%), Standardized Coefficient (18.9%), Shapley Values (19.9%), Johnson’s Epsilon (16.6%).</p>
+<p>Conclusion: Another key driver of satisfaction.</p>
+<p><strong>9. Makes a difference in my life:</strong></p>
+<p>Very high importance: Pearson Correlation (13.2%), Standardized Coefficient (29.1%), Shapley Values (25.5%), Johnson’s Epsilon (22.0%), XGBoost (15.8%).</p>
+<p>Conclusion: Consistently one of the most important factors.</p>
+</section>
+<section id="summary" class="level2">
+<h2 class="anchored" data-anchor-id="summary">Summary</h2>
+<p><strong>Top Drivers of Satisfaction</strong></p>
+<p>Trust in the brand is the most consistently high-rated factor across multiple metrics, indicating that customer trust in the brand has a profound and consistent impact on overall satisfaction. This suggests that fostering and maintaining trust is crucial for any brand aiming to improve customer satisfaction. Outstanding customer service also shows high importance across all metrics, underlining that excellent customer service is vital for keeping customers satisfied. Additionally, the perception that the product or service makes a difference in customers’ lives is consistently one of the top factors, showing very high importance across most metrics. This highlights that customers highly value how the product or service impacts their lives positively.</p>
+<p><strong>Moderate Drivers of Satisfaction</strong></p>
+<p>Appealing benefits or rewards hold moderately high importance across various metrics, indicating that attractive benefits and rewards significantly contribute to customer satisfaction. Ease of use is another important factor, particularly in non-linear models, suggesting that while ease of use is significant, it is not the top factor. The perception that the product helps build credit quickly shows moderate importance, especially in tree-based models like Random Forest, making it an important but secondary factor. Differentiation from other cards is moderately important across most metrics, indicating that being different from other cards is valued by customers but is not the most critical factor.</p>
+<p><strong>Lower Drivers of Satisfaction</strong></p>
+<p>Rewards for responsible usage generally show lower importance in linear models but have some significance in non-linear models. This indicates that while these rewards are valued, they are less critical compared to other factors. The perception that the product is used by a lot of people generally has lower importance but shows higher importance in non-linear models like Random Forest and XGBoost. This suggests that while widespread usage is a less critical factor overall, it still holds some significance in certain contexts.</p>
 
 
 </section>

@@ -2,98 +2,482 @@
 title: "Key Drivers Analysis"
 author: "Duyen Tran"
 date: today
-format:
-    html:
-        code-fold: true
 ---
 
+## Introduction
+Key Driver Analysis (KDA) is a statistical technique used to determine the factors (or "drivers") that most significantly impact a particular outcome or dependent variable. It is commonly used in fields like marketing, customer satisfaction, product development, and human resources to understand what influences key outcomes such as customer satisfaction, employee engagement, or product success.
 
-This post implements a few measure of variable importance, interpreted as a key drivers analysis, for certain aspects of a payment card on customer satisfaction with that payment card.
+This post implements a few measure of variable importance, interpreted as a key drivers analysis, for certain aspects of a payment card on customer satisfaction with that payment card. This involves calculating pearson correlations, standardized regression coefficients, "usefulness", Shapley values for a linear regression, Johnson's relative weights, and the mean decrease in the gini coefficient from a random forest.
+
+## Data Overview
+First of all, let's have some data overview:
+
 
 ```{python}
+#| echo: false
 import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+import rpy2.robjects as robjects
+from rpy2.robjects import pandas2ri
+from relativeImp import relativeImp
+import xgboost as xgb
+from functools import reduce
+```
+
+```{python}
 data = pd.read_csv('data_for_drivers_analysis.csv')
 data
 ```
 
-_todo: replicate the table on slide 19 of the session 4 slides. This involves calculating pearson correlations, standardized regression coefficients, "usefulness", Shapley values for a linear regression, Johnson's relative weights, and the mean decrease in the gini coefficient from a random forest. You may use packages built into R or Python._
-# Pearson Correlations
+```{python}
+# Calculate summary statistics for the dataset
+summary_statistics = data.describe()
+
+# Display the summary statistics
+summary_statistics
+```
+
+As we can see, there are 2,553 rows of data that helps further analysis to answer the questions:
+
+1. Is offered by a brand I trust
+2. Helps build credit quickly
+3. Is different from other cards
+4. Is easy to use
+5. Has appealing benefits or rewards
+6. Rewards me for responsible usage
+7. Is used by a lot of people
+8. Provides outstanding customer service
+9. Makes a difference in my life
+
+## Summary of Metrics
+
+To implement measures of variable importance, interpreted as a key drivers analysis, the process will include metrics:
+
+- Pearson Correlation: Measures the linear relationship between each perception and satisfaction.
+- Polychoric Correlation: Estimates the correlation between two theorized normally distributed continuous latent variables from observed ordinal variables.
+- Standardized Coefficient: The coefficients from a linear regression model standardized to have unit variance.
+- Shapley Values: Measure the contribution of each feature to the model’s prediction averaged over all possible combinations of features.
+- Johnson's Epsilon: Reflects the relative importance of predictors adjusted for multicollinearity.
+= Mean Decrease in Gini Coefficient: Reflects the importance of each feature in reducing impurity in a Random Forest model.
+- XGBoost: Feature importance from the XGBoost model, based on how useful each feature is in reducing the objective function’s error.
+
+
+First of all, let's do some preparation for the model:
 
 ```{python}
-import numpy as np
+# Assign X as individual variables in regression
+X_list = ['trust', 'build', 'differs', 'easy', 'appealing', 'rewarding', 'popular', 'service', 'impact']
 
-# Selecting relevant columns for correlation
-columns_of_interest = ['trust', 'build', 'differs', 'easy', 'appealing', 'rewarding', 'popular', 'service', 'impact']
-correlation_matrix = data[columns_of_interest].corrwith(data['satisfaction'])
+X = data[X_list]
+
+# Assign y as dependent variables in regression
+y = data['satisfaction']
+```
+
+## Pearson Correlations
+
+The formula for calculating the Pearson correlation coefficient 
+𝑟 is:
+
+$$
+r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x_i - \bar{x})^2} \sqrt{\sum_{i=1}^{n} (y_i - \bar{y})^2}} 
+$$
+
+The Pearson correlation coefficient (r) measures the strength and direction of the linear relationship between two variables. It is widely used in statistics and data analysis to assess whether and how strongly pairs of variables are related. The value of the Pearson correlation coefficient ranges from -1 to 1:
+
+1: A perfect positive linear relationship
+
+-1: A perfect negative linear relationship
+
+0: No linear relationship
+
+```{python}
+# Create correlation matrix
+correlation_matrix = X.corrwith(y)
+
+# Normalize correlations
+correlation_matrix /= correlation_matrix.sum()
 
 # Convert to percentage format
 pearson_correlations = (correlation_matrix * 100).round(1).astype(str) + '%'
-pearson_correlations
+
+pearson_correlations_df = pd.DataFrame({
+    'Perception': pearson_correlations.index,
+    'Pearson_Correlation': pearson_correlations.values
+})
+
+pearson_correlations_df
+```
+
+## Polychoric Correlations
+
+Polychoric correlation is used to estimate the correlation between two theorized normally distributed continuous latent variables from two observed ordinal variables. This type of correlation is particularly useful when dealing with ordinal data, where the variables are measured on an ordinal scale.
+
+The polychoric correlation \(\rho\) can be estimated using:
+$$
+\rho = \frac{\sum_{i=1}^{n} \sum_{j=1}^{m} (o_{ij} - e_{ij})^2 / e_{ij}}{\sqrt{\sum_{i=1}^{n} (o_{i+} - e_{i+})^2 / e_{i+} \sum_{j=1}^{m} (o_{+j} - e_{+j})^2 / e_{+j}}}
+$$
+
+Where:
+
+- ${o_{ij}}$ is the observed frequency for the cell in row ${i}$ and column ${j}$.
+
+- ${e_{ij}}$ is the expected frequency under the assumption of independence.
+
+- ${o_{i+}}$ and ${o_{+j}}$ are the marginal totals for row ${i}$ and column ${j}$.
+
+- ${e_{i+}}$ and ${e_{+j}}$ are the expected marginal totals for row ${i}$ and column ${j}$.
+
+To enhance the process, we use polycor library from R then transform them to python code:
+
+```{python}
+# Activate the pandas2ri conversion
+pandas2ri.activate()
+
+# Initialize a list to store the results
+correlation = []
+
+# Define the R code for the polychoric_corr function
+r_code = """
+library(polycor)
+
+polychoric_corr <- function(x, y) {
+  result <- polychor(x, y)
+  return(result)
+}
+"""
+
+# Run the R code
+robjects.r(r_code)
+
+# Get the polychoric_corr function
+polychoric_corr = robjects.globalenv['polychoric_corr']
+
+for col in X_list:
+    r_corr = polychoric_corr(y, data[col])
+    correlation.append(r_corr[0])
+
+# Normalize correlations
+total = sum(correlation)
+correlation = [value / total for value in correlation]
+
+# Convert correlations to a pandas DataFrame
+poly_corr_df = pd.DataFrame({
+    'Perception': X_list,
+    'Polychoric Correlation': correlation
+})
+
+# Reformat the column
+poly_corr_df['Polychoric Correlation'] = (poly_corr_df['Polychoric Correlation']* 100).round(1).astype(str) + '%'
+
+
+poly_corr_df
 
 ```
 
+## Standardized Regression Coefficients
+
+The standardized regression coefficient for predictor ${X_j}$ in a multiple regression model is:
+
+$$
+\beta_j = b_j \cdot \frac{\sigma_{X_j}}{\sigma_Y}
+$$
+
+where ${b_j}$ is the unstandardized regression coefficient, ${\sigma_{X_j}}$ is the standard deviation of ${X_j}$ , and ${\sigma_Y}$ is the standard deviation of the outcome variable ${Y}$.
+
+These are the coefficients obtained from a regression model after standardizing the variables (i.e., converting them to a common scale). This allows for comparison of the relative importance of each predictor.
+
 ```{python}
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
-
-# Extracting features and target
-X = data[columns_of_interest]
-y = data['satisfaction']
-
-# Standardizing the features
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
 # Fitting the linear regression model
 model = LinearRegression()
-model.fit(X_scaled, y)
+model.fit(X, y)
 
 # Obtaining standardized coefficients
 coefficients = model.coef_
 
 # Standardized coefficients as a DataFrame for better manipulation
 coefficients_df = pd.DataFrame({
-    'Perception': columns_of_interest,
+    'Perception': X_list,
     'Standardized Coefficient': coefficients
 })
+#
+# Normalize the coefficients
+coefficients_df['Standardized Coefficient'] /= coefficients_df['Standardized Coefficient'].sum()
 
 # Convert to percentage format
-coefficients_df['Standardized Coefficient'] = (coefficients_df['Standardized Coefficient'] * 100).round(1).astype(str) + '%'
-coefficients_df.set_index('Perception', inplace=True)
+coefficients_df['Standardized Coefficient'] = (
+    coefficients_df['Standardized Coefficient'] * 100).round(1).astype(str) + '%'
 
 coefficients_df
-
 ```
+
+## Shapley values
+
+Shapley values, originating from cooperative game theory, are a method to fairly distribute the "payout" among players based on their contribution to the total payout. In the context of machine learning and regression models, Shapley values are used to quantify the contribution of each feature to the prediction of a model.
+
+For linear regression, Shapley values provide a way to understand the importance and contribution of each predictor variable to the prediction for each instance. This is done by considering all possible combinations of features and calculating the marginal contribution of each feature.
+
+The Shapley value for a feature ${j}$ is given by:
+$$
+\phi_j = \sum_{S \subseteq N \setminus \{j\}} \frac{|S|!(|N| - |S| - 1)!}{|N|!} \left[ v(S \cup \{j\}) - v(S) \right]
+$$
+
+Where:
+
+- ${N}$ is the set of all features
+
+- ${S}$ is a subset of ${N}$ excluding ${j}$
+
+- ${v(S)}$ is the value function (e.g., model performance) for subset ${S}$.
 
 ```{python}
-from sklearn.ensemble import RandomForestRegressor
+import shap
 
-# Initialize the Random Forest model
-rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+model = LinearRegression()
+model.fit(X, y)
 
-# Fit the model
-rf_model.fit(X, y)
 
-# Calculate feature importances
-importances = rf_model.feature_importances_
+# Calculate Shapley values using the shap library
+explainer = shap.LinearExplainer(model, X)
+shap_values = explainer(X)
 
-# Store importances in a DataFrame
-importances_df = pd.DataFrame({
-    'Perception': columns_of_interest,
-    'Mean Decrease in Gini Coefficient': importances
+# Get the mean absolute Shapley values for each feature
+shap_values_mean = pd.DataFrame(shap_values.values, columns=X.columns).abs().mean()
+
+shap_values_mean /= shap_values_mean.sum()
+
+shap_values_mean = (shap_values_mean * 100).round(1).astype(str) + '%'
+
+shap_values_df = pd.DataFrame({
+    'Perception': shap_values_mean.index,
+    'Shapley Values': shap_values_mean.values
 })
 
-# Convert to percentage format
-importances_df['Mean Decrease in Gini Coefficient'] = (importances_df['Mean Decrease in Gini Coefficient'] * 100).round(1).astype(str) + '%'
-importances_df.set_index('Perception', inplace=True)
 
-importances_df
-
+shap_values_df
 
 ```
 
 
-_If you want a challenge, either (1) implement one or more of the measures yourself. "Usefulness" is rather easy to program up. Shapley values for linear regression are a bit more work. Or (2) add additional measures to the table such as the importance scores from XGBoost._
+## Johnson Relative
+
+Decomposes the model’s ${R^2}$ to assign weights to each predictor, reflecting their relative contribution to the explained variance in the outcome.
+
+
+The relative weight for a predictor ${X_j}$ is calculated as:
+$$
+RW_j = \sum_{k=1}^{p} \left( \frac{\lambda_{jk}^2 \cdot \text{Var}(Z_k)}{\text{Var}(Y)} \right)
+$$
+
+where:
+
+${\lambda_{jk}}$ is the loading of predictor ${j}$ on the ${k}$-th principal component
+
+${\text{Var}(Z_k)}$ is the variance of the ${k}$-th principal component
+
+${\text{Var}(Y)}$ is the variance of the outcome variable.
+
+
+```{python}
+# Perform relative weights analysis
+johnsons_eps = relativeImp(data, outcomeName= 'satisfaction', driverNames = X_list)
+
+# Drop the 'rawRelaImpt' column
+johnsons_eps = johnsons_eps.drop('rawRelaImpt', axis=1)
+
+# Rename the columns
+johnsons_eps = johnsons_eps.rename(columns={'driver': 'Perception', 'normRelaImpt': "Johnson's Epsilon"})
+
+# Reformat the columns
+johnsons_eps["Johnson's Epsilon"] = johnsons_eps["Johnson's Epsilon"].round(1).astype('str') + "%"
+
+
+johnsons_eps
+```
+
+## Mean Decrease in Gini Coefficient
+
+In Random Forests, the Gini importance (or Mean Decrease in Gini) is calculated based on the average decrease in impurity (Gini impurity) brought by each feature to the nodes in the trees.
+
+The Mean Decrease in Gini for a feature ${j}$ is:
+$$
+\text{MDG}_j = \frac{1}{T} \sum_{t=1}^{T} \left( \Delta Gini(t, j) \right)
+$$
+
+Where:
+
+- ${T}$ is the total number of trees
+
+- ${\Delta Gini(t, j)}$ is the decrease in Gini impurity for tree ${t}$ due to feature ${j}$.
+
+
+
+```{python}
+np.random.seed(42)
+# Fit Random Forest model
+rf_model = RandomForestClassifier(n_estimators=50,max_depth=8)
+rf_model.fit(X, y)
+
+# Get Mean Decrease in Gini Coefficient (feature importances)
+rf_importances = pd.Series(rf_model.feature_importances_, index=X.columns)
+
+# rf_importances /= rf_importances.sum()
+
+rf_importances_df = pd.DataFrame({
+    'Perception': rf_importances.index,
+    'Mean Decrease in Gini Coefficient': rf_importances.values
+})
+
+rf_importances_df['Mean Decrease in Gini Coefficient'] = (
+    rf_importances_df['Mean Decrease in Gini Coefficient']* 100).round(1).astype(str) + '%'
+
+# Display the feature importances
+rf_importances_df
+```
+
+
+## XGBoost Feature Importance
+
+XGBoost provides three types of feature importance: weight (frequency of a feature in trees), cover (average coverage of the feature), and gain (average gain brought by a feature to the branches it is on).
+
+1. Weight (frequency)
+$$
+\text{Weight}_j = \sum_{t=1}^{T} \sum_{n \in t} I(n = j)
+$$
+
+where ${T}$ is the total number of trees, ${n}$ are the nodes in tree ${t}$, and ${I}$ is an indicator function that is 1 if the node ${n}$ uses feature ${j}$, otherwise 0.
+
+2. Cover (Average Cover)
+
+$$
+\text{Cover}_j = \sum_{t=1}^{T} \sum_{n \in t} \frac{I(n = j) \cdot \text{cover}(n)}{\sum_{n' \in t} \text{cover}(n')}
+$$
+
+3. Gain (Average Gain)
+
+$$
+\text{Gain}_j = \sum_{t=1}^{T} \sum_{n \in t} \frac{I(n = j) \cdot \text{gain}(n)}{\sum_{n' \in t} \text{gain}(n')}
+$$
+
+```{python}
+# Shift the classes in the target variable to start from 0
+y_shifted = y - 1
+
+# Train the XGBoost model with the shifted target variable
+xgb_model = xgb.XGBClassifier()
+xgb_model.fit(X, y_shifted)
+
+# Get feature importances from the XGBoost model
+xgb_importances = pd.Series(xgb_model.feature_importances_, index=X.columns)
+
+xgb_importances_df = pd.DataFrame({
+    'Perception': xgb_importances.index,
+    'XGBoost': xgb_importances.values
+})
+
+xgb_importances_df['XGBoost'] = (
+    xgb_importances_df['XGBoost']* 100).round(1).astype(str) + '%'
+
+# Display the feature importances
+xgb_importances_df
+
+```
+
+## Results
+
+Now combine all results together:
+
+```{python}
+# Create dataframe list
+dataframes = [
+    pearson_correlations_df, 
+    poly_corr_df, coefficients_df, 
+    shap_values_df, 
+    johnsons_eps, 
+    rf_importances_df, 
+    xgb_importances_df] 
+
+# Merge all dataframe
+table = reduce(lambda left,right: pd.merge(left,right,on='Perception'), dataframes)
+
+table
+```
+
+
+
+**Interpretation by Perception**
+
+**1. Is offered by a brand I trust:**
+
+Highest importance across multiple metrics: Pearson Correlation (13.3%), Standardized Coefficient (24.8%), Shapley Values (26.7%), Johnson's Epsilon (19.8%), XGBoost (15.1%).
+
+Conclusion: This is consistently identified as a key driver of satisfaction across different methods.
+
+**2. Helps build credit quickly:**
+
+Moderate importance: Pearson Correlation (10.0%), Standardized Coefficient (4.3%), Shapley Values (4.5%), Johnson's Epsilon (6.6%), Mean Decrease in Gini (11.4%).
+
+Conclusion: Important, but less so than "trust".
+
+**3. Is different from other cards:**
+
+Moderate to lower importance: Pearson Correlation (9.6%), Standardized Coefficient (6.3%), Shapley Values (5.6%), Johnson's Epsilon (7.0%).
+
+Conclusion: Also important, but not a top driver.
+
+**4. Is easy to use:**
+
+Moderate importance: Pearson Correlation (11.1%), Standardized Coefficient (4.7%), Shapley Values (5.1%), Johnson's Epsilon (8.2%).
+
+Conclusion: Important, but consistently less so than "trust".
+
+**5. Has appealing benefits or rewards:**
+
+Moderate importance: Pearson Correlation (10.8%), Standardized Coefficient (7.3%), Shapley Values (7.6%), Johnson's Epsilon (8.3%).
+
+Conclusion: Consistently important across all measures.
+
+**6. Rewards me for responsible usage:**
+
+Lower importance: Pearson Correlation (10.1%), Standardized Coefficient (1.1%), Shapley Values (1.1%), Johnson's Epsilon (6.0%).
+
+Conclusion: Generally less important compared to other perceptions.
+
+**7. Is used by a lot of people:**
+
+Lower to moderate importance: Pearson Correlation (8.9%), Standardized Coefficient (3.6%), Shapley Values (3.8%), Johnson's Epsilon (5.4%), Mean Decrease in Gini (12.1%).
+
+Conclusion: Less critical than other factors.
+
+**8. Provides outstanding customer service:**
+
+High importance: Pearson Correlation (13.0%), Standardized Coefficient (18.9%), Shapley Values (19.9%), Johnson's Epsilon (16.6%).
+
+Conclusion: Another key driver of satisfaction.
+
+**9. Makes a difference in my life:**
+
+Very high importance: Pearson Correlation (13.2%), Standardized Coefficient (29.1%), Shapley Values (25.5%), Johnson's Epsilon (22.0%), XGBoost (15.8%).
+
+Conclusion: Consistently one of the most important factors.
+
+## Summary
+
+**Top Drivers of Satisfaction**
+
+Trust in the brand is the most consistently high-rated factor across multiple metrics, indicating that customer trust in the brand has a profound and consistent impact on overall satisfaction. This suggests that fostering and maintaining trust is crucial for any brand aiming to improve customer satisfaction. Outstanding customer service also shows high importance across all metrics, underlining that excellent customer service is vital for keeping customers satisfied. Additionally, the perception that the product or service makes a difference in customers' lives is consistently one of the top factors, showing very high importance across most metrics. This highlights that customers highly value how the product or service impacts their lives positively.
+
+**Moderate Drivers of Satisfaction**
+
+Appealing benefits or rewards hold moderately high importance across various metrics, indicating that attractive benefits and rewards significantly contribute to customer satisfaction. Ease of use is another important factor, particularly in non-linear models, suggesting that while ease of use is significant, it is not the top factor. The perception that the product helps build credit quickly shows moderate importance, especially in tree-based models like Random Forest, making it an important but secondary factor. Differentiation from other cards is moderately important across most metrics, indicating that being different from other cards is valued by customers but is not the most critical factor.
+
+**Lower Drivers of Satisfaction**
+
+Rewards for responsible usage generally show lower importance in linear models but have some significance in non-linear models. This indicates that while these rewards are valued, they are less critical compared to other factors. The perception that the product is used by a lot of people generally has lower importance but shows higher importance in non-linear models like Random Forest and XGBoost. This suggests that while widespread usage is a less critical factor overall, it still holds some significance in certain contexts.
+
 
 
 
