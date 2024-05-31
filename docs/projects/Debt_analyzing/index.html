@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Website - Analyze International debt statistic</title>
+<title>Website - Analyze International Debt Statistic</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -170,7 +170,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Analyze International debt statistic</h1>
+<h1 class="title">Analyze International Debt Statistic</h1>
 </div>
 
 
@@ -234,7 +234,7 @@ What is the average amount of debt owed by countries across different debt indic
 <p>
 The first line of code connects us to the <code>international_debt</code> database where the table <code>international_debt</code> is residing. Let’s first <code>SELECT</code> <em>all</em> of the columns from the <code>international_debt</code> table. Also, we’ll limit the output to the first ten rows to keep the output clean.
 </p>
-<div id="d99030e9" class="cell" data-execution_count="1">
+<div id="3a08e8c9" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sqlite3</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -259,12 +259,10 @@ The first line of code connects us to the <code>international_debt</code> databa
 <span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Execute a SQL query</span></span>
 <span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>sql SELECT <span class="op">*</span> FROM international_debt LIMIT <span class="dv">10</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>The sql extension is already loaded. To reload it, use:
-  %reload_ext sql
- * sqlite:///international_debt.db
+<pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="46">
+<div class="cell-output cell-output-display" data-execution_count="1">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -361,7 +359,7 @@ From the first ten rows, we can see the amount of debt owed by <em>Afghanistan</
 <p>
 Without a count of unique countries, we will not be able to perform our statistical analyses holistically. In this section, we are going to extract the number of unique countries present in the table.
 </p>
-<div id="efbd3076" class="cell" data-dc="{&quot;key&quot;:&quot;12&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="2">
+<div id="d1b39ea3" class="cell" data-dc="{&quot;key&quot;:&quot;12&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    COUNT(DISTINCT(country_name)) AS total_distinct_countries</span>
@@ -370,7 +368,7 @@ Without a count of unique countries, we will not be able to perform our statisti
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="47">
+<div class="cell-output cell-output-display" data-execution_count="2">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -393,7 +391,7 @@ Done.</code></pre>
 <p>
 We can see there are a total of 124 countries present on the table. As we saw in the first section, there is a column called <code>indicator_name</code> that briefly specifies the purpose of taking the debt. Just beside that column, there is another column called <code>indicator_code</code> which symbolizes the category of these debts. Knowing about these various debt indicators will help us to understand the areas in which a country can possibly be indebted to.
 </p>
-<div id="84cf2313" class="cell" data-dc="{&quot;key&quot;:&quot;20&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="3">
+<div id="64654295" class="cell" data-dc="{&quot;key&quot;:&quot;20&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    DISTINCT indicator_code AS distinct_debt_indicators</span>
@@ -403,7 +401,7 @@ We can see there are a total of 124 countries present on the table. As we saw in
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="48">
+<div class="cell-output cell-output-display" data-execution_count="3">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -501,7 +499,7 @@ As mentioned earlier, the financial debt of a particular country represents its 
 <p>
 Let’s switch gears from the debt indicators now and find out the total amount of debt (in USD) that is owed by the different countries. This will give us a sense of how the overall economy of the entire world is holding up.
 </p>
-<div id="1cf13bd1" class="cell" data-execution_count="4">
+<div id="6e9fbfbe" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    ROUND(SUM(debt)<span class="op">/</span><span class="dv">1000000</span>, <span class="dv">2</span>) AS total_debt</span>
@@ -510,7 +508,7 @@ Let’s switch gears from the debt indicators now and find out the total amount 
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="49">
+<div class="cell-output cell-output-display" data-execution_count="4">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -536,7 +534,7 @@ Done.</code></pre>
 <p>
 Now that we have the exact total of the amounts of debt owed by several countries, let’s now find out the country that owns the highest amount of debt along with the amount. <strong>Note</strong> that this debt is the sum of different debts owed by a country across several categories. This will help to understand more about the country in terms of its socio-economic scenarios. We can also find out the category in which the country owns its highest debt. But we will leave that for now.
 </p>
-<div id="bb2bbded" class="cell" data-dc="{&quot;key&quot;:&quot;36&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="5">
+<div id="fc10d9ea" class="cell" data-dc="{&quot;key&quot;:&quot;36&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    country_name, SUM(debt) AS total_debt</span>
@@ -548,7 +546,7 @@ Now that we have the exact total of the amounts of debt owed by several countrie
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="50">
+<div class="cell-output cell-output-display" data-execution_count="5">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -576,7 +574,7 @@ So, it was <em>China</em>. A more in-depth breakdown of China’s debts can be f
 <p>
 We now have a brief overview of the dataset and a few of its summary statistics. We already have an idea of the different debt indicators in which the countries owe their debts. We can dig even further to find out on an average how much debt a country owes? This will give us a better sense of the distribution of the amount of debt across different indicators.
 </p>
-<div id="bcf80e7d" class="cell" data-dc="{&quot;key&quot;:&quot;44&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="6">
+<div id="8f5e310d" class="cell" data-dc="{&quot;key&quot;:&quot;44&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    indicator_code AS debt_indicator,</span>
@@ -590,7 +588,7 @@ We now have a brief overview of the dataset and a few of its summary statistics.
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="51">
+<div class="cell-output cell-output-display" data-execution_count="6">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -668,7 +666,7 @@ An interesting observation in the above finding is that there is a huge differen
 <p>
 We can investigate this a bit more so as to find out which country owes the highest amount of debt in the category of long term debts (<code>DT.AMT.DLXF.CD</code>). Since not all the countries suffer from the same kind of economic disturbances, this finding will allow us to understand that particular country’s economic condition a bit more specifically.
 </p>
-<div id="1d22d5da" class="cell" data-execution_count="7">
+<div id="81924564" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql </span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    country_name, </span>
@@ -682,7 +680,7 @@ We can investigate this a bit more so as to find out which country owes the high
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="52">
+<div class="cell-output cell-output-display" data-execution_count="7">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -710,7 +708,7 @@ China has the highest amount of debt in the long-term debt (<code>DT.AMT.DLXF.CD
 <p>
 We saw that long-term debt is the topmost category when it comes to the average amount of debt. But is it the most common indicator in which the countries owe their debt? Let’s find that out.
 </p>
-<div id="ac44c214" class="cell" data-dc="{&quot;key&quot;:&quot;60&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="8">
+<div id="6df987c1" class="cell" data-dc="{&quot;key&quot;:&quot;60&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>SELECT indicator_code, COUNT(indicator_code) AS indicator_count</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>FROM international_debt</span>
@@ -721,7 +719,7 @@ We saw that long-term debt is the topmost category when it comes to the average 
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="53">
+<div class="cell-output cell-output-display" data-execution_count="8">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -828,7 +826,7 @@ Let’s change tracks from <code>debt_indicator</code>s now and focus on the amo
 <p>
 In this notebook, we took a look at debt owed by countries across the globe. We extracted a few summary statistics from the data and unraveled some interesting facts and figures. We also validated our findings to make sure the investigations are correct.
 </p>
-<div id="7ecce0ca" class="cell" data-dc="{&quot;key&quot;:&quot;68&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="9">
+<div id="74e4494f" class="cell" data-dc="{&quot;key&quot;:&quot;68&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>SELECT country_name, MAX(debt) AS maximum_debt</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>FROM international_debt</span>
@@ -839,7 +837,7 @@ In this notebook, we took a look at debt owed by countries across the globe. We 
 <pre><code> * sqlite:///international_debt.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="54">
+<div class="cell-output cell-output-display" data-execution_count="9">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
