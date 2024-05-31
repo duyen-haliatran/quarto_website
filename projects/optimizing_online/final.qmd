@@ -4,7 +4,7 @@ title: Optimizing Online Sport Retail Revenue
 
 Sports clothing is a booming sector!
 
-In this notebook, I will use your SQL skills to analyze product data for an online sports retail company.
+In this notebook, I will use my SQL skills to analyze product data for an online sports retail company.
 
 I will work with numeric, string, and timestamp data on pricing and revenue, ratings, reviews, descriptions, and website traffic.
 
