@@ -190,8 +190,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>Sports clothing is a booming sector!</p>
 <p>In this notebook, I will use my SQL skills to analyze product data for an online sports retail company.</p>
-<p>I will work with numeric, string, and timestamp data on pricing and revenue, ratings, reviews, descriptions, and website traffic.</p>
-<p>I will use techniques such as aggregation, cleaning, labeling, Common Table Expressions, and correlation to produce recommendations on how the company can maximize revenue!</p>
+<p>I will work with numeric, string, and timestamp data on pricing and revenue, ratings, reviews, descriptions, and website traffic then use techniques such as aggregation, cleaning, labeling, Common Table Expressions, and correlation to produce recommendations on how the company can maximize revenue!</p>
 <section id="project-tasks" class="level3">
 <h3 class="anchored" data-anchor-id="project-tasks">Project Tasks</h3>
 <ol type="1">
@@ -496,7 +495,7 @@ Brand of the product
 <p>
 We will be dealing with missing data as well as numeric, string, and timestamp data types to draw insights about the products in the online store. Let’s start by finding out how complete the data is.
 </p>
-<div id="a93372f2" class="cell" data-execution_count="1">
+<div id="25386437" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sqlite3</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -514,25 +513,29 @@ We will be dealing with missing data as well as numeric, string, and timestamp d
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Close the database connection</span></span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>conn.close()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="44482b95" class="cell" data-execution_count="2">
+<div id="c21ab534" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext sql</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>sql sqlite:<span class="op">///</span>consolidated.db</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>The sql extension is already loaded. To reload it, use:
+  %reload_ext sql</code></pre>
 </div>
-<div id="9a183b6d" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>) AS total_rows,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    SUM(CASE WHEN i.description IS NULL THEN <span class="dv">0</span> ELSE <span class="dv">1</span> END) AS count_description,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    SUM(CASE WHEN f.listing_price IS NULL THEN <span class="dv">0</span> ELSE <span class="dv">1</span> END) AS count_listing_price,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    SUM(CASE WHEN t.last_visited IS NULL THEN <span class="dv">0</span> ELSE <span class="dv">1</span> END) AS count_last_visited</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>FROM info i</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>JOIN finance f ON i.product_id <span class="op">=</span> f.product_id</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>JOIN traffic t ON f.product_id <span class="op">=</span> t.product_id<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="9a9792c5" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>) AS total_rows,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    SUM(CASE WHEN i.description IS NULL THEN <span class="dv">0</span> ELSE <span class="dv">1</span> END) AS count_description,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    SUM(CASE WHEN f.listing_price IS NULL THEN <span class="dv">0</span> ELSE <span class="dv">1</span> END) AS count_listing_price,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    SUM(CASE WHEN t.last_visited IS NULL THEN <span class="dv">0</span> ELSE <span class="dv">1</span> END) AS count_last_visited</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>FROM info i</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>JOIN finance f ON i.product_id <span class="op">=</span> f.product_id</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>JOIN traffic t ON f.product_id <span class="op">=</span> t.product_id<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="3">
+<div class="cell-output cell-output-display" data-execution_count="14">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -564,25 +567,25 @@ We can see the database contains 3,179 products in total. Of the columns we prev
 <p>
 How do the price points of Nike and Adidas products differ? Answering this question can help us build a picture of the company’s stock range and customer market. We will run a query to produce a distribution of the <code>listing_price</code> and the count for each price, grouped by <code>brand</code>.
 </p>
-<div id="7329a7df" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>SELECT </span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    CAST(f.listing_price AS INTEGER),</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>FROM finance AS f</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>JOIN brands AS b</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>ON b.product_id <span class="op">=</span> f.product_id</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>WHERE f.listing_price <span class="op">&gt;</span> <span class="dv">0</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>AND (b.brand <span class="op">=</span> <span class="st">'Adidas'</span> OR b.brand <span class="op">=</span> <span class="st">'Nike'</span>)</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>GROUP BY b.brand, f.listing_price</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>ORDER BY f.listing_price DESC<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="f6c4070c" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>SELECT </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    CAST(f.listing_price AS INTEGER),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>FROM finance AS f</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>JOIN brands AS b</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>ON b.product_id <span class="op">=</span> f.product_id</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>WHERE f.listing_price <span class="op">&gt;</span> <span class="dv">0</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>AND (b.brand <span class="op">=</span> <span class="st">'Adidas'</span> OR b.brand <span class="op">=</span> <span class="st">'Nike'</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>GROUP BY b.brand, f.listing_price</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>ORDER BY f.listing_price DESC<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="4">
+<div class="cell-output cell-output-display" data-execution_count="15">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -992,29 +995,29 @@ It turns out there are 77 unique prices for the products in our database, which 
 <p>
 Let’s build on our previous query by assigning labels to different price ranges, grouping by <code>brand</code> and <code>label</code>. We will also include the total <code>revenue</code> for each price range and <code>brand</code>.
 </p>
-<div id="d5936f0e" class="cell" data-dc="{&quot;key&quot;:&quot;27&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>),</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    SUM(f.revenue) AS total_revenue,</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    CASE </span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        WHEN f.listing_price <span class="op">&lt;</span> <span class="dv">42</span> THEN <span class="st">'Budget'</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        WHEN f.listing_price <span class="op">&gt;=</span> <span class="dv">42</span> AND f.listing_price <span class="op">&lt;</span> <span class="dv">74</span> THEN <span class="st">'Average'</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        WHEN f.listing_price <span class="op">&gt;=</span> <span class="dv">74</span> AND f.listing_price <span class="op">&lt;</span> <span class="dv">129</span> THEN <span class="st">'Expensive'</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        ELSE <span class="st">'Elite'</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    END AS price_category</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>FROM finance AS f</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>JOIN brands AS b </span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>ON b.product_id <span class="op">=</span> f.product_id</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>WHERE b.brand IS NOT NULL</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>GROUP BY b.brand, price_category</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>ORDER BY total_revenue DESC<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="b7444057" class="cell" data-dc="{&quot;key&quot;:&quot;27&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    SUM(f.revenue) AS total_revenue,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    CASE </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        WHEN f.listing_price <span class="op">&lt;</span> <span class="dv">42</span> THEN <span class="st">'Budget'</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        WHEN f.listing_price <span class="op">&gt;=</span> <span class="dv">42</span> AND f.listing_price <span class="op">&lt;</span> <span class="dv">74</span> THEN <span class="st">'Average'</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        WHEN f.listing_price <span class="op">&gt;=</span> <span class="dv">74</span> AND f.listing_price <span class="op">&lt;</span> <span class="dv">129</span> THEN <span class="st">'Expensive'</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        ELSE <span class="st">'Elite'</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    END AS price_category</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>FROM finance AS f</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>JOIN brands AS b </span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>ON b.product_id <span class="op">=</span> f.product_id</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>WHERE b.brand IS NOT NULL</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>GROUP BY b.brand, price_category</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>ORDER BY total_revenue DESC<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="5">
+<div class="cell-output cell-output-display" data-execution_count="16">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -1088,21 +1091,21 @@ Interestingly, grouping products by brand and price range allows us to see that 
 <p>
 Note we have been looking at <code>listing_price</code> so far. The <code>listing_price</code> may not be the price that the product is ultimately sold for. To understand <code>revenue</code> better, let’s take a look at the <code>discount</code>, which is the percent reduction in the <code>listing_price</code> when the product is actually sold. We would like to know whether there is a difference in the amount of <code>discount</code> offered between brands, as this could be influencing <code>revenue</code>.
 </p>
-<div id="b69e8b6d" class="cell" data-dc="{&quot;key&quot;:&quot;38&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    AVG(f.discount) <span class="op">*</span> <span class="dv">100</span> AS average_discount</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>FROM finance AS f</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>INNER JOIN brands AS b </span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>ON b.product_id <span class="op">=</span> f.product_id</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>GROUP BY brand</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>HAVING brand IS NOT NULL<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="7f0008b8" class="cell" data-dc="{&quot;key&quot;:&quot;38&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    AVG(f.discount) <span class="op">*</span> <span class="dv">100</span> AS average_discount</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>FROM finance AS f</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>INNER JOIN brands AS b </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>ON b.product_id <span class="op">=</span> f.product_id</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>GROUP BY brand</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>HAVING brand IS NOT NULL<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="6">
+<div class="cell-output cell-output-display" data-execution_count="17">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -1137,24 +1140,24 @@ To improve revenue further, the company could try to reduce the amount of discou
 <p>
 Now explore whether relationships exist between the columns in our database. We will check the strength and direction of a correlation between <code>revenue</code> and <code>reviews</code>.
 </p>
-<div id="28e7b98b" class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to the SQLite database</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>conn <span class="op">=</span> sqlite3.<span class="ex">connect</span>(<span class="st">'consolidated.db'</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch data</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"""</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT r.reviews, f.revenue</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="st">FROM finance AS f</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="st">JOIN reviews AS r ON r.product_id = f.product_id</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_sql(query, conn)</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate correlation using pandas</span></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>correlation <span class="op">=</span> df[<span class="st">'reviews'</span>].corr(df[<span class="st">'revenue'</span>])</span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Correlation between reviews and revenue:"</span>, correlation)</span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Close the database connection</span></span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>conn.close()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="962273cb" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to the SQLite database</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>conn <span class="op">=</span> sqlite3.<span class="ex">connect</span>(<span class="st">'consolidated.db'</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch data</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT r.reviews, f.revenue</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="st">FROM finance AS f</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="st">JOIN reviews AS r ON r.product_id = f.product_id</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_sql(query, conn)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate correlation using pandas</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>correlation <span class="op">=</span> df[<span class="st">'reviews'</span>].corr(df[<span class="st">'revenue'</span>])</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Correlation between reviews and revenue:"</span>, correlation)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Close the database connection</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>conn.close()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Correlation between reviews and revenue: 0.6518512283481297</code></pre>
 </div>
@@ -1168,21 +1171,21 @@ Interestingly, there is a strong positive correlation between <code>revenue</cod
 <p>
 Perhaps the length of a product’s <code>description</code> might influence a product’s <code>rating</code> and <code>reviews</code> — if so, the company can produce content guidelines for listing products on their website and test if this influences <code>revenue</code>. Let’s check this out!
 </p>
-<div id="eb6a14df" class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>SELECT</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    (LENGTH(i.description) <span class="op">/</span> <span class="dv">100</span>) <span class="op">*</span> <span class="dv">100</span> AS description_length,  <span class="op">--</span> Truncate to nearest <span class="dv">100</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    ROUND(AVG(r.rating), <span class="dv">2</span>) AS average_rating  <span class="op">--</span> Calculate average <span class="kw">and</span> <span class="bu">round</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>FROM reviews r</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>JOIN info i ON r.product_id <span class="op">=</span> i.product_id</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>WHERE i.description IS NOT NULL</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>GROUP BY description_length</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>ORDER BY description_length<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="d68738b2" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>SELECT</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    (LENGTH(i.description) <span class="op">/</span> <span class="dv">100</span>) <span class="op">*</span> <span class="dv">100</span> AS description_length,  <span class="op">--</span> Truncate to nearest <span class="dv">100</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    ROUND(AVG(r.rating), <span class="dv">2</span>) AS average_rating  <span class="op">--</span> Calculate average <span class="kw">and</span> <span class="bu">round</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>FROM reviews r</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>JOIN info i ON r.product_id <span class="op">=</span> i.product_id</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>WHERE i.description IS NOT NULL</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>GROUP BY description_length</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>ORDER BY description_length<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="8">
+<div class="cell-output cell-output-display" data-execution_count="19">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -1237,24 +1240,24 @@ As we know a correlation exists between <code>reviews</code> and <code>revenue</
 <p>
 Let’s take a look at the volume of <code>reviews</code> by month to see if there are any trends or gaps we can look to exploit.
 </p>
-<div id="2b7e5259" class="cell" data-dc="{&quot;key&quot;:&quot;68&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>SELECT </span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    strftime(<span class="st">'%m'</span>, t.last_visited) AS month,  <span class="op">--</span> Extracts the month <span class="im">as</span> <span class="st">'MM'</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    COUNT(r.product_id) AS num_reviews</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>FROM reviews AS r</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>JOIN traffic AS t ON r.product_id <span class="op">=</span> t.product_id</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>JOIN brands AS b ON r.product_id <span class="op">=</span> b.product_id</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>WHERE b.brand IS NOT NULL AND t.last_visited IS NOT NULL</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>GROUP BY b.brand, strftime(<span class="st">'%m'</span>, t.last_visited)</span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>ORDER BY b.brand, month<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="7618e292" class="cell" data-dc="{&quot;key&quot;:&quot;68&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>SELECT </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    b.brand,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    strftime(<span class="st">'%m'</span>, t.last_visited) AS month,  <span class="op">--</span> Extracts the month <span class="im">as</span> <span class="st">'MM'</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    COUNT(r.product_id) AS num_reviews</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>FROM reviews AS r</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>JOIN traffic AS t ON r.product_id <span class="op">=</span> t.product_id</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>JOIN brands AS b ON r.product_id <span class="op">=</span> b.product_id</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>WHERE b.brand IS NOT NULL AND t.last_visited IS NOT NULL</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>GROUP BY b.brand, strftime(<span class="st">'%m'</span>, t.last_visited)</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>ORDER BY b.brand, month<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="9">
+<div class="cell-output cell-output-display" data-execution_count="20">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -1399,33 +1402,33 @@ Looks like product reviews are highest in the first quarter of the calendar year
 <p>
 So far, we have been primarily analyzing Adidas vs Nike products. Now, let’s switch our attention to the type of products being sold. As there are no labels for product type, we will create a Common Table Expression (CTE) that filters <code>description</code> for keywords, then use the results to find out how much of the company’s stock consists of footwear products and the median <code>revenue</code> generated by these items.
 </p>
-<div id="78477948" class="cell" data-dc="{&quot;key&quot;:&quot;76&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>WITH footwear AS (</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    SELECT </span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        i.description, </span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>        f.revenue</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    FROM info AS i</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    INNER JOIN finance AS f ON i.product_id <span class="op">=</span> f.product_id</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    WHERE (LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%s</span><span class="st">hoe%'</span> OR </span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'%trainer%'</span> OR </span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%f</span><span class="st">oot%'</span>) </span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>          AND i.description IS NOT NULL</span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>SELECT</span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>) AS num_footwear_products,</span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    (SELECT f.revenue</span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>     FROM footwear f</span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>     ORDER BY f.revenue</span>
-<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>     LIMIT <span class="dv">1</span></span>
-<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>     OFFSET (SELECT (COUNT(<span class="op">*</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> <span class="dv">2</span> FROM footwear)) AS median_footwear_revenue</span>
-<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>FROM footwear<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="69ac48fb" class="cell" data-dc="{&quot;key&quot;:&quot;76&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>WITH footwear AS (</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    SELECT </span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>        i.description, </span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        f.revenue</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    FROM info AS i</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    INNER JOIN finance AS f ON i.product_id <span class="op">=</span> f.product_id</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    WHERE (LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%s</span><span class="st">hoe%'</span> OR </span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'%trainer%'</span> OR </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%f</span><span class="st">oot%'</span>) </span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>          AND i.description IS NOT NULL</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>SELECT</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>) AS num_footwear_products,</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    (SELECT f.revenue</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>     FROM footwear f</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>     ORDER BY f.revenue</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>     LIMIT <span class="dv">1</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>     OFFSET (SELECT (COUNT(<span class="op">*</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> <span class="dv">2</span> FROM footwear)) AS median_footwear_revenue</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>FROM footwear<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="10">
+<div class="cell-output cell-output-display" data-execution_count="21">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
@@ -1453,36 +1456,36 @@ Recall from the first task that we found there are 3,117 products without missin
 <p>
 This is interesting, but we have no point of reference for whether footwear’s <code>median_revenue</code> is good or bad compared to other products. So, for our final task, let’s examine how this differs to clothing products. We will re-use <code>footwear</code>, adding a filter afterward to count the number of products and <code>median_revenue</code> of products that are not in <code>footwear</code>.
 </p>
-<div id="01c464a1" class="cell" data-dc="{&quot;key&quot;:&quot;86&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>WITH footwear AS (</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    SELECT </span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        i.product_id</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    FROM info AS i</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    WHERE i.description IS NOT NULL</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>      AND (LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%s</span><span class="st">hoe%'</span> OR </span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'%trainer%'</span> OR </span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%f</span><span class="st">oot%'</span>)</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>SELECT </span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>) AS num_clothing_products,</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    (SELECT f.revenue</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>     FROM finance AS f</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>     JOIN info AS i ON i.product_id <span class="op">=</span> f.product_id</span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>     WHERE i.product_id NOT IN (SELECT product_id FROM footwear)</span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>     ORDER BY f.revenue</span>
-<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>     LIMIT <span class="dv">1</span></span>
-<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>     OFFSET (SELECT COUNT(<span class="op">*</span>) <span class="op">/</span> <span class="dv">2</span> FROM finance AS f</span>
-<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>             JOIN info AS i ON i.product_id <span class="op">=</span> f.product_id</span>
-<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>             WHERE i.product_id NOT IN (SELECT product_id FROM footwear))) AS median_clothing_revenue</span>
-<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>FROM info AS i</span>
-<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>WHERE i.product_id NOT IN (SELECT product_id FROM footwear)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="142ccbb2" class="cell" data-dc="{&quot;key&quot;:&quot;86&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>WITH footwear AS (</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    SELECT </span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>        i.product_id</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    FROM info AS i</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    WHERE i.description IS NOT NULL</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>      AND (LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%s</span><span class="st">hoe%'</span> OR </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'%trainer%'</span> OR </span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>           LOWER(i.description) LIKE <span class="st">'</span><span class="sc">%f</span><span class="st">oot%'</span>)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>SELECT </span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    COUNT(<span class="op">*</span>) AS num_clothing_products,</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    (SELECT f.revenue</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>     FROM finance AS f</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>     JOIN info AS i ON i.product_id <span class="op">=</span> f.product_id</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>     WHERE i.product_id NOT IN (SELECT product_id FROM footwear)</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>     ORDER BY f.revenue</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>     LIMIT <span class="dv">1</span></span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>     OFFSET (SELECT COUNT(<span class="op">*</span>) <span class="op">/</span> <span class="dv">2</span> FROM finance AS f</span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>             JOIN info AS i ON i.product_id <span class="op">=</span> f.product_id</span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>             WHERE i.product_id NOT IN (SELECT product_id FROM footwear))) AS median_clothing_revenue</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>FROM info AS i</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>WHERE i.product_id NOT IN (SELECT product_id FROM footwear)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> * sqlite:///consolidated.db
 Done.</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="11">
+<div class="cell-output cell-output-display" data-execution_count="22">
 <div>
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <thead>
