@@ -1,0 +1,485 @@
+---
+title: "Segmentation Methods"
+author: "Duyen Tran"
+date: today
+---
+
+## Introduction
+
+Market segmentation is the process of dividing a broad consumer or business market, normally consisting of existing and potential customers, into sub-groups of consumers (known as segments) based on some type of shared characteristics. The objective is to design marketing strategies that target specific groups more effectively, leading to better customer satisfaction and increased business success.
+
+Cluster analytics, also known as cluster analysis or clustering, is a technique used in data analysis and machine learning to group a set of objects in such a way that objects in the same group (called a cluster) are more similar to each other than to those in other groups (clusters). The primary goal of cluster analytics is to find natural groupings in data based on inherent similarities or patterns.
+
+Cluster analytics provides a powerful, data-driven approach to market segmentation, uncovering natural groupings within the data that might not be visible through traditional methods. By leveraging cluster analytics, businesses can achieve more accurate, dynamic, and actionable market segments, leading to enhanced marketing effectiveness and improved customer satisfaction.
+
+## Data overview
+
+```{python}
+#| echo: false
+#| results: hide
+import pandas as pd
+import pyrsm as rsm
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from scipy.optimize import linear_sum_assignment
+import warnings
+warnings.filterwarnings("ignore")
+```
+
+```{python}
+#| echo: false
+iris = pd.read_csv('iris.csv')
+iris
+```
+
+```{python}
+# Calculate summary statistics for the dataset
+summary_statistics = iris.describe()
+
+# Display the summary statistics
+summary_statistics
+```
+
+
+## K-Means
+
+To implement the k-means algorithm and visualize its steps, I will follow these steps:
+
+- Initial of Centroids
+
+- Compute distances 
+
+- Assign clusters based on initial centroids
+
+- Update Centroids
+
+- Implement the k-means algorithm.
+
+- Visualize steps of the algorithm.
+
+Let's start by normalizing the dataset and implementing the k-means algorithm. We'll use only the numerical columns for clustering
+
+### Initial of Centroids
+
+The initialization of centroids is a crucial step in the k-means algorithm. The process involves selecting ${k}$ initial points in the dataset that will serve as the starting centroids for the clustering process. Proper initialization can significantly affect the convergence speed and the quality of the final clusters. Here's a detailed explanation of the centroid initialization process:
+
+```{python}
+# Step 1: Randomly select initial centroids
+def initial_centroids(X, k):
+    np.random.seed(42)
+    random_indices = np.random.choice(X.index, size=k, replace=False)
+    return X.loc[random_indices]
+
+# Number of clusters
+k = 3
+
+centroids = initial_centroids(iris, k)
+initial_centroids_numeric = centroids.select_dtypes(include=[np.number])
+
+# Function to plot the initial centroid selection
+def plot_initial_centroids(X, centroids):
+    X_values = X.values
+    centroids_values = centroids.values
+    plt.figure(figsize=(8, 6))
+    plt.scatter(X_values[:, 0], X_values[:, 1], s=30, cmap='viridis')
+    plt.scatter(centroids_values[:, 0], centroids_values[:, 1], s=300, c='red', marker='X')
+    plt.title('Initial Centroid Selection')
+    plt.xlabel('Sepal Length (normalized)')
+    plt.ylabel('Sepal Width (normalized)')
+    plt.show()
+
+# Plot initial centroids
+plot_initial_centroids(iris, centroids)
+
+```
+
+In this step, we randomly select ${k}$ data points from the dataset. The initial centroids act as the starting points for the algorithm.
+
+These points are chosen to represent the center of the initial clusters. Since they are selected randomly, different runs of the algorithm might start with different centroids, leading to different clustering results.
+
+### Compute distances
+
+```{python}
+# Step 2: Compute distances
+def compute_distances(X, centroids):
+    X_numeric = X.select_dtypes(include=[np.number])
+    X_values = X_numeric.values
+    centroids_values = centroids.values
+    distances = np.linalg.norm(X_values[:, np.newaxis] - centroids_values, axis=2)
+    return distances
+
+# Compute distances
+distances = compute_distances(iris, initial_centroids_numeric)
+
+# Assign clusters based on initial centroids
+initial_labels = np.argmin(distances, axis=1)
+
+```
+
+
+```{python}
+# Extract the first data point from the dataset
+first_data_point = iris.select_dtypes(include=[np.number]).iloc[0].values
+
+# Compute distances from the first data point to each centroid
+distances_first_point = np.linalg.norm(first_data_point - initial_centroids_numeric.values, axis=1)
+
+# Coordinates of the first data point and initial centroids
+first_data_point_coords = first_data_point[:2]  # Only take the first two dimensions
+centroid_coords = initial_centroids_numeric.values[:, :2]  # Only take the first two dimensions
+
+# Plot the first data point and centroids with distances
+plt.figure(figsize=(8, 6))
+plt.scatter(first_data_point_coords[0], first_data_point_coords[1], color='green', s=100, label='Data Point 1')
+plt.scatter(centroid_coords[:, 0], centroid_coords[:, 1], color='red', s=100, label='Centroids')
+
+# Draw lines and annotate distances
+for i, (x, y) in enumerate(centroid_coords):
+    plt.plot([first_data_point_coords[0], x], [first_data_point_coords[1], y], 'k-')
+    distance = np.linalg.norm(first_data_point_coords - np.array([x, y]))
+    mid_x, mid_y = (first_data_point_coords[0] + x) / 2, (first_data_point_coords[1] + y) / 2
+    plt.text(mid_x, mid_y, f'{distance:.2f}', fontsize=12)
+
+# Annotate plot
+plt.xlabel('Sepal Length')
+plt.ylabel('Sepal Width')
+plt.legend()
+plt.title('Distances from First Data Point to Initial Centroids')
+plt.show()
+```
+
+The plot visualizes the distances from the first data point in Iris dataset to three initial centroids:
+
+**Distance to Centroid 1:**
+
+- The distance is approximately 0.67 units.
+
+- This centroid is the closest to Data Point 1.
+
+**Distance to Centroid 2:**
+
+- The distance is approximately 1.22 units.
+
+- This centroid is further away compared to Centroid 1.
+
+**Distance to Centroid 3:**
+
+- The distance is approximately 2.75 units.
+
+- This centroid is the farthest from Data Point 1.
+
+**Iterpretation:**
+
+- Cluster Assignment: Based on the Euclidean distances, Data Point 1 would be assigned to the cluster of Centroid 1, as it is the nearest.
+
+- Cluster Formation: Initial clusters will be formed by assigning each data point in the dataset to the nearest centroid. Over several iterations, the centroids will move to minimize the within-cluster variance.
+
+
+### Assign clusters based on initial centroids
+```{python}
+# Step 3: Assign cluster
+# Function to plot the initial assignment step
+def plot_initial_assignment(X, centroids, labels):
+    X_numeric = X.select_dtypes(include=[np.number])
+    X_values = X_numeric.values
+    centroids_values = centroids.values
+    plt.figure(figsize=(8, 6))
+    plt.scatter(X_values[:, 0], X_values[:, 1], c=labels, s=30, cmap='viridis')
+    plt.scatter(centroids_values[:, 0], centroids_values[:, 1], s=300, c='red', marker='X')
+    plt.title('Initial Assignment Step')
+    plt.xlabel('Sepal Length')
+    plt.ylabel('Sepal Width')
+    plt.show()
+
+# Plot initial assignment step
+plot_initial_assignment(iris, initial_centroids_numeric, initial_labels)
+```
+
+### Update Centroids
+
+After assigning each data point to the nearest centroid (forming clusters), the algorithm updates the position of each centroid based on the mean of the data points assigned to that cluster. This step ensures that the centroids move closer to the center of their respective clusters, improving the overall clustering result.
+
+
+```{python}
+# Step 3: Update centroids
+def update_centroids(X, labels, k):
+    X_numeric = X.select_dtypes(include=[np.number])
+    new_centroids = np.array([X_numeric.values[labels == i].mean(axis=0) for i in range(k)])
+    return new_centroids
+```
+
+Why This Step is Important:
+
+- Accuracy: Updating the centroids ensures that they accurately represent the current cluster composition.
+
+- Convergence: The k-means algorithm converges when the centroids stabilize, meaning they no longer change significantly between iterations.
+
+- Cluster Quality: Properly updated centroids lead to more compact and well-defined clusters, improving the overall quality of the clustering.
+
+### Implement k-means algorithm
+
+```{python}
+# Step 4: Implement k-means algorithm
+def kmeans(X, k, max_iters=100, tol=1e-4):
+    centroids = initial_centroids(X, k).select_dtypes(include=[np.number]).values
+
+    for i in range(max_iters):
+        distances = compute_distances(X, pd.DataFrame(centroids))
+        labels = np.argmin(distances, axis=1)
+        new_centroids = update_centroids(X, labels, k)
+        
+        if np.linalg.norm(new_centroids - centroids) < tol:
+            break
+        
+        centroids = new_centroids
+
+    return centroids, labels
+
+# Run the k-means algorithm
+final_centroids, final_labels = kmeans(iris, k)
+
+# Plot the final clusters
+def plot_final_clusters(X, centroids, labels, message):
+    X_numeric = X.select_dtypes(include=[np.number])
+    X_values = X_numeric.values
+    plt.figure(figsize=(8, 6))
+    plt.scatter(X_values[:, 0], X_values[:, 1], c=labels, s=30, cmap='viridis')
+    plt.scatter(centroids[:, 0], centroids[:, 1], s=300, c='red', marker='X')
+    plt.title(f'K-means using {message}')
+    plt.xlabel('Sepal Length')
+    plt.ylabel('Sepal Width')
+    plt.show()
+
+# Plot final clusters
+plot_final_clusters(iris, final_centroids, final_labels, message = "Self-Build Fuction")
+```
+
+```{python}
+# Plot the final clusters
+def plot_final_clusters(X, centroids, labels, message):
+    X_numeric = X.select_dtypes(include=[np.number])
+    X_values = X_numeric.values
+    plt.figure(figsize=(8, 6))
+    for i, cluster in enumerate(X_values):
+        plt.scatter(X_values[:, 0], X_values[:, 1], c=labels, s=30, cmap='viridis')
+    plt.scatter(centroids[:, 0], centroids[:, 1], s=300, c='red', marker='X')
+    plt.title(f'K-means using {message}')
+    plt.xlabel('Sepal Length')
+    plt.ylabel('Sepal Width')
+    plt.show()
+
+# Plot final clusters
+plot_final_clusters(iris, final_centroids, final_labels, message = "Self-Build Fuction")
+```
+
+### Compare to the built-in Python package
+```{python}
+# Using the built-in KMeans function from scikit-learn
+iris_numeric = iris.select_dtypes(include=[np.number])
+kmeans_sklearn = KMeans(n_clusters=3, random_state=42)
+kmeans_sklearn.fit(iris_numeric)
+
+# Extracting the centroids and labels from the sklearn KMeans
+centroids_sklearn = kmeans_sklearn.cluster_centers_
+sklearn_labels = kmeans_sklearn.labels_
+
+# Align labels using the Hungarian algorithm. 
+# This function to making sure label of both approaches are the same colors 
+# without change the clusters themselves
+def align_labels(final_labels, sklearn_labels):
+    D = np.zeros((k, k))
+    for i in range(k):
+        for j in range(k):
+            D[i, j] = np.sum((sklearn_labels == i) != (final_labels == j))
+    row_ind, col_ind = linear_sum_assignment(D)
+    aligned_labels = np.zeros_like(sklearn_labels)
+    for i, j in zip(row_ind, col_ind):
+        aligned_labels[sklearn_labels == i] = j
+    return aligned_labels
+aligned_labels = align_labels(final_labels, sklearn_labels)
+
+plot_final_clusters(iris, centroids_sklearn, aligned_labels, message = "Sklearn Function")
+```
+
+As we can see, both plot presents the same cluster characteristic. Here are the detailed intepretation:
+
+**Cluster 1 (Green):**
+
+- Located primarily on the left side of the plot.
+
+- Contains data points with a range of Sepal Lengths and Sepal Widths.
+
+- The centroid is positioned where the density of green points is highest.
+
+**Cluster 2 (Purple):**
+
+- Positioned in the middle of the plot.
+
+- Comprises data points with intermediate Sepal Lengths and Sepal Widths.
+
+- The centroid is at the center of the dense region of purple points.
+
+**Cluster 3 (Yellow):**
+
+- Found on the right side of the plot.
+
+- Includes data points with larger Sepal Lengths and a range of Sepal Widths.
+
+- The centroid is placed where the yellow points are densest.
+
+**Cluster Separation and Compactness:**
+
+- Compactness: Each cluster appears to be relatively compact, with data points grouped closely around their centroids.
+
+- Separation: There is clear separation between the clusters, as indicated by distinct regions of colors. This suggests that the clusters are well-defined and the algorithm has successfully partitioned the data.
+
+**Cluster Size:**
+
+- Cluster 1 (Green) appears to have the largest number of data points.
+
+- Cluster 3 (Yellow) has fewer data points compared to Cluster 1.
+
+- Cluster 2 (Purple) has the smallest number of data points.
+
+#### **Comparison to Initial Centroid Selection**
+
+**Initial Centroids:**
+
+- The initial centroids were randomly placed and did not represent the actual data distribution well.
+
+- The data points were not assigned to any clusters, so no clear clustering was visible.
+
+**Movement of Centroids:**
+
+- The centroids moved significantly from their initial positions to their final positions.
+
+- This movement indicates that the algorithm iteratively adjusted the centroids to better represent the data points assigned to each cluster.
+
+**Clustering Quality:**
+
+- Initial State: No clear clusters, with centroids positioned arbitrarily.
+
+- Final State: Well-defined clusters with centroids accurately representing the center of each cluster.
+
+**Summary**
+
+- The final clusters plot demonstrates the effectiveness of the k-means algorithm in partitioning the data into three distinct clusters.
+
+- The clusters are well-separated and compact, indicating that the centroids have been optimized to minimize within-cluster variance.
+
+- The clear separation and grouping of data points into distinct clusters highlight the successful convergence of the k-means algorithm.
+
+- By analyzing the final clusters, we can conclude that the k-means algorithm has effectively identified meaningful patterns in the data, resulting in well-defined clusters
+
+
+### Number of Clusters
+
+#### **Within Cluster Sum of Squares**
+
+The Within-Cluster Sum of Squares (WCSS), also known as inertia, is a measure of the total variance within clusters. It quantifies the compactness of the clusters formed by a clustering algorithm like k-means. The goal of k-means clustering is to minimize this WCSS value.
+
+For a given set of clusters ${C}$ = { ${C_1}$, ${C_2}$, $\ldots$, ${C_k}$ }, where ${C_i}$ represents the ${i}$-th cluster, the WCSS is defined as follows:
+
+$$
+\text{WCSS} = \sum_{i=1}^k \sum_{x \in C_i} \|x - \mu_i\|^2 $$
+
+where:
+
+- ${x}$ is a data point.
+
+- $\mu_i$ is the centroid of the ${i}$-th cluster.
+
+- ${\|x - \mu_i\|}$ represents the Euclidean distance between a data point ${x}$ and the centroid $\mu_i$.
+
+
+```{python}
+# Define range of clusters
+cluster_range = range(2, 8)
+wcss = []
+
+for k in cluster_range:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(iris_numeric)
+    wcss.append(kmeans.inertia_)
+
+plt.plot(cluster_range, wcss, marker='o')
+plt.title('Within-Cluster Sum of Squares (WCSS)')
+plt.xlabel('Number of clusters (K)')
+plt.ylabel('WCSS')
+plt.show()
+```
+
+The WCSS plot shows the sum of squared distances between each point and the centroid of its assigned cluster for different numbers of clusters (K). The goal is to minimize the WCSS, indicating compact clusters where data points are close to their centroids.
+
+K=2: The WCSS is very high (~145), suggesting that having only two clusters does not effectively capture the structure of the data.
+
+K=3: There is a significant drop in WCSS to around 85, indicating that adding a third cluster greatly improves the compactness of the clusters.
+
+K=4 to K=7: The decrease in WCSS continues but at a much slower rate. The changes are more gradual, indicating diminishing returns as more clusters are added.
+
+**Interpretation**
+
+- Elbow Point: The "elbow" point is typically where the WCSS starts to decrease more slowly. In this plot, the elbow is at K=3.
+
+- Diminishing Returns: After K=3, adding more clusters results in smaller reductions in WCSS, suggesting that the additional clusters do not significantly improve the clustering quality.
+
+The WCSS plot suggests that K=3 is a good choice for the number of clusters because it is the elbow point where the rate of decrease in WCSS slows down. This indicates a balance between having a sufficient number of clusters and maintaining compact clusters.
+
+#### **Silhouette Score**
+
+
+The Silhouette Score is a metric used to evaluate the quality of a clustering. It measures how similar each point is to its own cluster compared to other clusters. The silhouette score ranges from -1 to 1, where a higher score indicates that the clusters are well-separated and well-defined.
+
+The silhouette score for a data point ${i}$ is defined as:
+
+$$ s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))} $$
+
+where:
+
+- ${a(i)}$ is the average distance between the data point ${i}$ and all other points in the same cluster.
+
+- ${b(i)}$  is the minimum average distance between the data point ${i}$ and points in the nearest cluster that ${i}$ is not a part of.
+
+The overall silhouette score for a clustering is the mean silhouette score of all the data points.
+
+
+```{python}
+
+silhouette_scores = []
+for k in cluster_range:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(iris_numeric)
+    silhouette_scores.append(silhouette_score(iris_numeric, kmeans.labels_))
+plt.plot(cluster_range, silhouette_scores, marker='o')
+plt.title('Silhouette Score')
+plt.xlabel('Number of clusters (K)')
+plt.ylabel('Silhouette Score')
+plt.show()
+```
+
+
+The Silhouette Score plot shows the average silhouette score for different numbers of clusters (K). The silhouette score measures how similar a point is to its own cluster compared to other clusters, with values ranging from -1 to 1.
+
+K=2: The silhouette score is the highest (~0.67), suggesting that two clusters provide the best separation and well-defined clusters.
+
+K=3: The silhouette score decreases to about 0.55, indicating that the separation between clusters is not as good as when K=2.
+
+K=4 to K=7: The silhouette score continues to decrease, indicating that adding more clusters reduces the quality of the separation between clusters.
+
+**Interpretation**
+
+Peak Score: The highest silhouette score is at K=2, suggesting that two clusters provide the best-defined and well-separated clusters.
+
+Decreasing Trend: As K increases, the silhouette score decreases, indicating that adding more clusters reduces the quality of separation.
+
+The Silhouette Score plot suggests that K=2 is the best choice for the number of clusters because it has the highest score, indicating the best separation between clusters.
+
+
+
+
+
+
+
