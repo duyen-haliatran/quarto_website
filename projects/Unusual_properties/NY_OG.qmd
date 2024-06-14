@@ -1,0 +1,950 @@
+---
+title: Unsupervised anomaly detection (fraud) algorithm
+format: html
+---
+
+This project has good example algorithms to do a forensic-type analysis, looking for anomalies in a dataset. We first do some data cleaning (exclusions, imputation, don't remove outliers - that's what we're looking for), then build variables that are designed to look for the kinds of anomalies we are interested in, in this case, unusual property valuations.
+
+After we build the variables we know we have lots of correlations and too high dimensionality so we need to remove correlations and reduce dimensionality. Since we don't have a dependent variable the easiest useful thing to do is PCA. We z scale (always z scale before a PCA), do PCA, keep the top few PCs, then z scale again in order to make each retained PC equally important (optional step; only do this if you keep just a few PCs.).
+
+We use two different anomaly detection (fraud) algorithms. The first just looks for outliers in the final scaled PC space using a Minkowski distance from the origin. The second method makes a simple autoencoder and the fraud score is then the reproduction error. It's important to note that each/either of these two methods would be a fine fraud score by itself.
+
+Since we have two score and we don't really know which one is better we just average the two scores. To do this we replace the score with its rank order and then average the rank-ordered scores for our final score.
+
+Finally we sort all the records by this final score and explore the top n records. To help the investigation we show which of the variables are driving these top scoring records with a heat map of the variable zscores, which can point the investigators to what's making the high score for these top scoring records.
+
+This problem is an invented problem to demonstrate the process of building unsupervised fraud models. The data set is real and the invented problem is realistic. What's lacking the most is the ability to interact with domain experts in order to do proper exclusions and design good/appropriate variables.
+
+The data can be found here: https://data.cityofnewyork.us/Housing-Development/Property-Valuation-and-Assessment-Data/rgy2-tti8
+
+
+{{< pdf project2.pdf width=100% height=800 >}}
+
+
+
+```{python}
+#| echo: false
+#| results: hide
+from datetime import datetime
+start_time = datetime.now()
+
+from sklearn.neural_network import MLPRegressor
+import pandas as pd
+import numpy as np
+import scipy.stats as sps
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.decomposition import PCA
+%matplotlib inline
+import warnings
+warnings.filterwarnings("ignore")
+```
+
+```{python}
+#| echo: false
+data = pd.read_csv('NY property data.csv')
+NY_data_orig = data.copy()
+
+```
+
+```{python}
+data.head()
+```
+
+## Remove some properties that we aren't interested in
+
+```{python}
+numrecords_orig = len(data)
+numrecords = numrecords_orig
+numrecords
+```
+
+```{python}
+#remove the records with easement type as goverment 
+data = data[data["EASEMENT"] != "U"].reset_index(drop=True)
+numremoved = numrecords - len(data)
+print('# records removed:', numremoved)
+```
+
+```{python}
+# create some words for the owner name that might be goverment or a cemetery
+gov_list = ['DEPT ', 'DEPARTMENT', 'UNITED STATES','GOVERNMENT',' GOVT ', 'CEMETERY']
+
+# owner = list(set(data['OWNER'].to_list()))
+# owner.pop(0) #remove the nan
+
+owner1 = list(set(data['OWNER'].to_list()))
+owner = [item for item in owner1 if str(item) != 'nan'] # remove any nan's
+
+remove_list = []
+print("Total owner number before removing is ", len(owner))
+
+for i in owner:
+   for g in gov_list:
+    if g in i and 'STORES' not in i:
+        remove_list.append(i)
+```
+
+```{python}
+# Look at the most frequent owners. This might show some other properties we aren't interested in.
+remove_list2 = data['OWNER'].value_counts().head(20).index.tolist()
+remove_list2
+```
+
+```{python}
+# add some others to also be removed
+remove_list2.append('THE CITY OF NEW YORK')
+remove_list2.append('NYS URBAN DEVELOPMENT')
+remove_list2.append('CULTURAL AFFAIRS')
+remove_list2.append('NY STATE PUBLIC WORKS')
+remove_list2.append("NYC DEP'T OF HIGHWAYS")
+remove_list2.append('CITY WIDE ADMINISTRAT')
+remove_list2.append('NEW YORK CITY')
+remove_list2.append('THE PORT OFNY & NJ')
+remove_list2.append('NEW YORK STATE DEPART')
+remove_list2.append('CITY AND NON-CITY OWN')
+remove_list2.append('SANITATION')
+remove_list2.append('NYS DOT')
+remove_list2.append('NEW YORK CITY TRANSIT')
+remove_list2.append('PORT AUTHORITY OF NY')
+remove_list2.append('NEW YORK STATE OWNED')
+remove_list2.append('NYC PARK DEPT')
+remove_list2.append('PORT OF NEW YORK AUTH')
+remove_list2.append('NYC PARK DEPT')
+remove_list2.append('LIRR')
+remove_list2.append('NY STATE PUBLIC SERV')
+remove_list2.append('STATE OF NEW YORK')
+remove_list2.append('NYC HIGHWAY DEPT')
+```
+
+```{python}
+for i in remove_list2:
+    if i not in remove_list:
+        remove_list.append(i)
+    else:
+        print(i)
+```
+
+```{python}
+# rremove some of the removes...
+remove_list.remove('YORKVILLE TOWERS ASSO')
+remove_list.remove('434 M LLC')
+remove_list.remove('DEUTSCHE BANK NATIONA')
+remove_list.remove('561 11TH AVENUE TMG L')
+remove_list.remove('MH RESIDENTIAL 1, LLC')
+```
+
+```{python}
+len(remove_list)
+```
+
+```{python}
+numrecords = len(data)
+removed = data[data['OWNER'].isin(remove_list)].reset_index(drop=True)
+data = data[~data['OWNER'].isin(remove_list)].reset_index(drop=True)
+numremoved = numrecords - len(data)
+print('# records removed:', numremoved)
+```
+
+```{python}
+removed.shape
+```
+
+```{python}
+# any on this list that we shouldn't remove?
+# plt.rcParams.update({'figure.figsize':(6,14)})
+plt.figure(figsize=(6,14))
+plt.xscale('log')
+removed['OWNER'].value_counts().head(50).sort_values().plot(kind='barh')
+```
+
+```{python}
+#| scrolled: true
+data.shape
+```
+
+```{python}
+# this is how many records we removed
+numrecords_orig - len(data)
+```
+
+```{python}
+data.head(10)
+```
+
+## Fill in missing ZIP
+
+```{python}
+# How many zips are missing? Replace NAN with 0 and count them.
+missing_zips = np.where(pd.isnull(data['ZIP']))[0]
+num_missing_zips_orig = len(missing_zips)
+num_missing_zips_orig
+```
+
+```{python}
+sum(data['BORO'].isna())
+```
+
+```{python}
+sum(data['STADDR'].isna())
+```
+
+```{python}
+# concatenate the 'staddr' and 'boro' columns into a new 'staddr_boro' column 
+data['staddr_boro'] = data[data['STADDR'].notnull()]['STADDR'] + '_' + data[data['BORO'].notnull()]['BORO'].astype(str)
+data['staddr_boro']
+```
+
+```{python}
+staddr_boro_zip = {}
+for index, staddrboro in data['staddr_boro'].items():
+    if staddrboro not in staddr_boro_zip :
+        staddr_boro_zip [staddrboro] = data.loc[index, 'ZIP']
+        
+        
+# fill in by mapping with street addrees boroughs
+data['ZIP'] = data['ZIP'].fillna(data['staddr_boro'].map(staddr_boro_zip))
+```
+
+```{python}
+# how many missing zips did we fill in with this last step?
+num_filled_in = num_missing_zips_orig - len(np.where(pd.isnull(data['ZIP']))[0])
+num_filled_in
+```
+
+```{python}
+# How many are still left to fill in?
+missing_zips = np.where(pd.isnull(data['ZIP']))[0]
+len(missing_zips)
+```
+
+```{python}
+
+# Assume the data is already sorted by zip. If a zip is missing, 
+# and the before and after zips are the same, fill in the zip with that value
+for i in range(len(missing_zips)):
+    if(data.loc[missing_zips[i]+1,'ZIP'] == data.loc[missing_zips[i]-1,'ZIP']):
+        data.loc[missing_zips[i],'ZIP'] = data.loc[missing_zips[i]-1,'ZIP']
+```
+
+```{python}
+# how many mnissing zips did we fill in with this last step?
+num_filled_in = len(missing_zips) - len(np.where(pd.isnull(data['ZIP']))[0])
+num_filled_in
+```
+
+```{python}
+# How many are still left to fill in?
+missing_zips = np.where(pd.isnull(data['ZIP']))[0]
+len(missing_zips)
+```
+
+```{python}
+%%time
+# For the remaining missing zips, just fill in with the previous record's zip.
+# another slow loop that should be improved...
+for i in range(len(missing_zips)):
+    data.loc[missing_zips[i],'ZIP'] = data.loc[missing_zips[i]-1,'ZIP']
+```
+
+```{python}
+missing_zips = np.where(pd.isnull(data['ZIP']))[0]
+len(missing_zips)
+```
+
+```{python}
+data = data.drop('staddr_boro', axis=1)
+```
+
+### FULLVAL, AVLAND, AVTOT
+
+#### FULLVAL
+
+```{python}
+len(data[data['FULLVAL']==0])
+```
+
+```{python}
+data['FULLVAL'].isnull().sum()
+```
+
+```{python}
+data['FULLVAL'].replace(0, np.nan, inplace=True)
+data['FULLVAL'].isnull().sum()
+```
+
+```{python}
+data["FULLVAL"] = data.\
+                        groupby(['TAXCLASS','BORO','BLDGCL'])['FULLVAL'].transform(lambda x: x.fillna(x.mean()))
+data['FULLVAL'].isnull().sum()
+```
+
+```{python}
+data["FULLVAL"] = data.\
+                        groupby(['TAXCLASS','BORO'])['FULLVAL'].transform(lambda x: x.fillna(x.mean()))
+data['FULLVAL'].isnull().sum()
+```
+
+```{python}
+data["FULLVAL"] = data.\
+                        groupby(['TAXCLASS'])['FULLVAL'].transform(lambda x: x.fillna(x.mean()))
+data['FULLVAL'].isnull().sum()
+```
+
+#### AVLAND
+
+```{python}
+len(data[data['AVLAND']==0])
+```
+
+```{python}
+data['AVLAND'].isnull().sum()
+```
+
+```{python}
+data['AVLAND'].replace(0, np.nan, inplace=True)
+data['AVLAND'].isnull().sum()
+```
+
+```{python}
+data["AVLAND"] = data.\
+                        groupby(['TAXCLASS','BORO','BLDGCL'])['AVLAND'].transform(lambda x: x.fillna(x.mean()))
+data['AVLAND'].isnull().sum()
+```
+
+```{python}
+data["AVLAND"] = data.\
+                        groupby(['TAXCLASS','BORO'])['AVLAND'].transform(lambda x: x.fillna(x.mean()))
+data['AVLAND'].isnull().sum()
+```
+
+```{python}
+data["AVLAND"] = data.\
+                        groupby(['TAXCLASS'])['AVLAND'].transform(lambda x: x.fillna(x.mean()))
+data['AVLAND'].isnull().sum()
+```
+
+#### AVTOT
+
+```{python}
+len(data[data['AVTOT']==0])
+```
+
+```{python}
+data['AVTOT'].isnull().sum()
+```
+
+```{python}
+data['AVTOT'].replace(0, np.nan, inplace=True)
+data['AVTOT'].isnull().sum()
+```
+
+```{python}
+data["AVTOT"] = data.\
+                        groupby(['TAXCLASS','BORO','BLDGCL'])['AVTOT'].transform(lambda x: x.fillna(x.mean()))
+data['AVTOT'].isnull().sum()
+```
+
+```{python}
+data["AVTOT"] = data.\
+                        groupby(['TAXCLASS','BORO'])['AVTOT'].transform(lambda x: x.fillna(x.mean()))
+data['AVTOT'].isnull().sum()
+```
+
+```{python}
+data["AVTOT"] = data.\
+                        groupby(['TAXCLASS'])['AVTOT'].transform(lambda x: x.fillna(x.mean()))
+data['AVTOT'].isnull().sum()
+```
+
+```{python}
+data.head().transpose()
+```
+
+## Fill in the missing STORIES
+
+```{python}
+data['STORIES'].isnull().sum()
+```
+
+```{python}
+modes = data.groupby(['BORO', 'BLDGCL'])['STORIES'] \
+         .transform(lambda x: x.mode(dropna=False).iloc[0])
+data['STORIES'] = data['STORIES'].fillna(modes)
+```
+
+```{python}
+data['STORIES'].isnull().sum()
+```
+
+```{python}
+data["STORIES"] = data.\
+                        groupby(['TAXCLASS'])['STORIES'].transform(lambda x: x.fillna(x.mean()))
+```
+
+```{python}
+data['STORIES'].isnull().sum()
+```
+
+```{python}
+#| scrolled: false
+data.head().transpose()
+```
+
+## Fill in LTFRONT, LTDEPTH, BLDDEPTH, BLDFRONT with averages by TAXCLASS
+
+```{python}
+# Because these 4 fields do not have NAs, we just need to replace 0s. 
+# We think zero and 1 are invalid values for these fields, so replace them with NA.
+# Calculate groupwise average. Replace 0 and 1's by NAs so they are not counted in calculating mean.
+data.loc[data['LTFRONT']==0,'LTFRONT']=np.nan
+data.loc[data['LTDEPTH']==0,'LTDEPTH']=np.nan
+data.loc[data['BLDFRONT']==0,'BLDFRONT']=np.nan
+data.loc[data['BLDDEPTH']==0,'BLDDEPTH']=np.nan
+data.loc[data['LTFRONT']==1,'LTFRONT']=np.nan
+data.loc[data['LTDEPTH']==1,'LTDEPTH']=np.nan
+data.loc[data['BLDFRONT']==1,'BLDFRONT']=np.nan
+data.loc[data['BLDDEPTH']==1,'BLDDEPTH']=np.nan
+```
+
+```{python}
+data.head()
+```
+
+#### LTFRONT
+
+```{python}
+data['LTFRONT'].isnull().sum()
+```
+
+```{python}
+data["LTFRONT"] = data.\
+                        groupby(['TAXCLASS','BORO'])['LTFRONT'].transform(lambda x: x.fillna(x.mean()))
+data[data['LTFRONT'].isnull()]
+```
+
+```{python}
+data["LTFRONT"] = data.\
+                        groupby(['TAXCLASS'])['LTFRONT'].transform(lambda x: x.fillna(x.mean()))
+data['LTFRONT'].isnull().sum()
+```
+
+#### LTDEPTH
+
+```{python}
+data['LTDEPTH'].isnull().sum()
+```
+
+```{python}
+data["LTDEPTH"] = data.\
+                        groupby(['TAXCLASS','BORO'])['LTDEPTH'].transform(lambda x: x.fillna(x.mean()))
+data[data['LTDEPTH'].isnull()]
+```
+
+```{python}
+data["LTDEPTH"] = data.\
+                        groupby(['TAXCLASS'])['LTDEPTH'].transform(lambda x: x.fillna(x.mean()))
+data['LTDEPTH'].isnull().sum()
+```
+
+#### BLDFRONT
+
+```{python}
+data['BLDFRONT'].isnull().sum()
+```
+
+```{python}
+data['BLDFRONT'] = data.\
+                        groupby(['TAXCLASS','BORO','BLDGCL'])['BLDFRONT'].transform(lambda x: x.fillna(x.mean()))
+data['BLDFRONT'].isnull().sum()
+```
+
+```{python}
+data['BLDFRONT'] = data.\
+                        groupby(['TAXCLASS','BORO'])['BLDFRONT'].transform(lambda x: x.fillna(x.mean()))
+data['BLDFRONT'].isnull().sum()
+```
+
+```{python}
+data['BLDFRONT'] = data.\
+                        groupby(['TAXCLASS'])['BLDFRONT'].transform(lambda x: x.fillna(x.mean()))
+data['BLDFRONT'].isnull().sum()
+```
+
+#### BLDEPTH
+
+```{python}
+data['BLDDEPTH'].isnull().sum()
+```
+
+```{python}
+data['BLDDEPTH'] = data.\
+                        groupby(['TAXCLASS','BORO','BLDGCL'])['BLDDEPTH'].transform(lambda x: x.fillna(x.mean()))
+data['BLDDEPTH'].isnull().sum()
+```
+
+```{python}
+data['BLDDEPTH'] = data.\
+                        groupby(['TAXCLASS','BORO'])['BLDDEPTH'].transform(lambda x: x.fillna(x.mean()))
+data['BLDDEPTH'].isnull().sum()
+```
+
+```{python}
+data['BLDDEPTH'] = data.\
+                        groupby(['TAXCLASS'])['BLDDEPTH'].transform(lambda x: x.fillna(x.mean()))
+data['BLDDEPTH'].isnull().sum()
+```
+
+```{python}
+data.dtypes
+```
+
+```{python}
+# convert ZIP to a string rather than a float
+# We call the first three digits of the zip zip3
+data['ZIP'] = data['ZIP'].astype(str)
+data['zip3'] = data['ZIP'].str[:3]
+```
+
+```{python}
+cols = data.columns
+print(cols)
+```
+
+### Now build variables that try to find properties that are unusual in ways we're interested in
+
+```{python}
+# epsilon is an arbitrary small number to make sure we don't divide by zero
+epsilon = .0001
+data['ltsize'] = data['LTFRONT'] * data['LTDEPTH'] + epsilon
+data['bldsize'] = data['BLDFRONT'] * data['BLDDEPTH'] + epsilon
+data['bldvol'] = data['bldsize'] * data['STORIES'] + epsilon
+```
+
+```{python}
+data['r1'] = data['FULLVAL'] / data['ltsize']
+data['r2'] = data['FULLVAL'] / data['bldsize']
+data['r3'] = data['FULLVAL'] / data['bldvol']
+data['r4'] = data['AVLAND'] / data['ltsize']
+data['r5'] = data['AVLAND'] / data['bldsize']
+data['r6'] = data['AVLAND'] / data['bldvol']
+data['r7'] = data['AVTOT'] / data['ltsize']
+data['r8'] = data['AVTOT'] / data['bldsize']
+data['r9'] = data['AVTOT'] / data['bldvol']
+```
+
+```{python}
+data.describe()
+```
+
+I want outliers in these 9 variables, either very high or very low. Very high is easy to find but very low might be close to zero and probably not many standard deviations below the average. A simple way to look for outliers that are very low is to also include 1/over these variables, which will be very large outliers when the variables are very low.
+First I scale them all to have reasonable average.
+
+```{python}
+vars9 = ['r1','r2','r3','r4','r5','r6','r7','r8','r9']
+for vars in vars9:
+    data[vars] = data[vars]/data[vars].median()
+    
+data.describe()
+```
+
+```{python}
+# add in the inverse of all the 9 primary variables.
+for vars in vars9:
+    data[vars+'inv'] = 1/(data[vars] + epsilon)
+```
+
+```{python}
+#| scrolled: true
+data.head()
+```
+
+Now I want the large outliers where the variables are either very low or very high, so I'll keep only one of the two, r or rinv, depending on which is largest. This allows me to find both the very low and high outliers.
+
+```{python}
+for vars in vars9:
+    data[vars] = data[[vars,vars+'inv']].max(axis=1)
+```
+
+Now I can remove the inverse columns since I have the 9 variables that I need
+
+```{python}
+for vars in vars9:
+    data.drop(columns=(vars+'inv'),inplace=True)
+
+data.describe()
+```
+
+Now I add more variables where I standardize each of these 9 basic variables by a few logical groupings.
+For example, is a property's value of r1 typical for that zip code? for that taxclass?
+
+```{python}
+# Standardized variables by appropriate logical group
+zip5_mean = data.groupby('ZIP')[vars9].mean()
+taxclass_mean = data.groupby('TAXCLASS')[vars9].mean()
+data = data.join(zip5_mean, on='ZIP', rsuffix='_zip5')
+data = data.join(taxclass_mean, on='TAXCLASS', rsuffix='_taxclass')
+rsuffix = ['_zip5', '_taxclass']
+for var in vars9:
+    for r in rsuffix:
+        data[str(var)+r] = data[var] / data[str(var)+r]
+```
+
+```{python}
+# include two more possibly interesting variables
+data['value_ratio'] = data['FULLVAL']/(data['AVLAND']+data['AVTOT'])
+data['value_ratio'] = data['value_ratio']/data['value_ratio'].mean()
+# again, use 1/variable if that's larger, in order to find the low outliers
+data['value_ratio'] = np.where(data['value_ratio'] < 1, 1/(data['value_ratio']+epsilon), data['value_ratio'])
+data['size_ratio'] = data['bldsize'] / (data['ltsize']+1)
+```
+
+```{python}
+data.head().transpose()
+```
+
+```{python}
+data.columns
+```
+
+```{python}
+#| scrolled: true
+save_record = data['RECORD']
+save_record.head()
+```
+
+```{python}
+data['lot_bldsize'] = data['ltsize'] / data['bldsize']
+# Flags and Indicators
+high_market_value_threshold = data['FULLVAL'].quantile(0.90)
+data['high_market_value_indicator'] = data['FULLVAL'] > high_market_value_threshold
+
+high_building_density_threshold = 0.70
+data['high_market_value_indicator'] = data['size_ratio'] > high_building_density_threshold
+
+# Interaction Terms
+data['lot_building_interaction'] = data['ltsize'] * data['bldsize']
+data['market_assessed_value_interaction'] = data['FULLVAL'] * data['AVTOT']
+```
+
+```{python}
+dropcols = ['RECORD','BBLE', 'BORO', 'BLOCK', 'LOT', 'EASEMENT',
+       'OWNER', 'BLDGCL', 'TAXCLASS', 'LTFRONT', 'LTDEPTH', 'EXT', 'STORIES',
+       'FULLVAL', 'AVLAND', 'AVTOT', 'EXLAND', 'EXTOT', 'EXCD1', 'STADDR',
+       'ZIP', 'EXMPTCL', 'BLDFRONT', 'BLDDEPTH', 'AVLAND2', 'AVTOT2',
+       'EXLAND2', 'EXTOT2', 'EXCD2', 'PERIOD', 'YEAR', 'VALTYPE', 'zip3','ltsize','bldsize','bldvol']
+data = data.drop(columns = dropcols)
+data.shape
+```
+
+```{python}
+#| scrolled: false
+# this dataframe is now just the variables for our unsupervised fraud models
+data.head().transpose()
+```
+
+```{python}
+# Calculate and write the basic statistics of all the variables to check if everything looks OK
+stats = data.describe().transpose()
+stats
+```
+
+```{python}
+data.isna().sum().sum()
+```
+
+```{python}
+# zscale all the variables
+data_zs = (data - data.mean()) / data.std()
+data_zs_save = data_zs.copy()
+data_zs.describe().transpose()
+```
+
+```{python}
+# do a complete PCA and look at the scree and cumulative variance plots
+pca = PCA(n_components = .99, svd_solver = 'full')
+pca.fit(data_zs)
+plt.plot(pca.explained_variance_ratio_)
+plt.xlabel('Number of components minus 1')
+plt.ylabel('PC variance')
+plt.xticks(np.arange(0, 36, step=2))
+plt.axvline(x=4, linestyle='--')
+```
+
+```{python}
+# do a complete PCA and look at the scree and cumulative variance plots
+pca = PCA(n_components = .99, svd_solver = 'full')
+pca.fit(data_zs)
+plt.axvline(x=4, linestyle='--')
+plt.bar(np.arange(len(pca.explained_variance_ratio_)), pca.explained_variance_ratio_)
+plt.plot(np.arange(len(pca.explained_variance_ratio_)), pca.explained_variance_ratio_, color='black')
+plt.xlabel('Number of components minus 1')
+plt.ylabel('PC variance')
+plt.xticks(np.arange(0, 10, step=1))
+
+plt.show()
+```
+
+```{python}
+plt.xlabel('Number of components minus 1')
+plt.plot(np.cumsum(pca.explained_variance_ratio_))
+plt.ylabel('PC cumulative variance')
+plt.yticks(np.arange(0.05, 1.1, step=.1))
+plt.xticks(np.arange(0, 36, step=2))
+plt.axvline(x=4, linestyle='--')
+plt.ylim(0,1)
+```
+
+```{python}
+%%time
+# now redo the PCA but just keep the top few PCs
+data_zs = data_zs_save.copy()
+pca = PCA(n_components = 5, svd_solver = 'full')
+princ_comps = pca.fit_transform(data_zs)
+pca.n_components_
+```
+
+```{python}
+print(np.cumsum(pca.explained_variance_ratio_))
+```
+
+```{python}
+data_pca = pd.DataFrame(princ_comps, columns = ['PC' + str(i) for i in range(1, pca.n_components_+1)])
+data_pca.shape
+```
+
+```{python}
+#| scrolled: true
+data_pca.head(5)
+```
+
+```{python}
+data_pca.describe()
+```
+
+```{python}
+#| scrolled: false
+# zscale the pcs.
+# I do this (make all the retained PCs equally important) if I only keep a small number of PCs.
+# Alternatively you can keep maybe up to 6 to 8 or so, and don't do this second z scale
+# I prefer to keep a somewhat small number of PCs and then make them all equally important via zscaling.
+# This second zscale step makes the later Minkowski distance to be similar to a Mahalanobis distance.
+# Many people don't do this second zscaling, but I like to do it.
+
+data_pca_zs = (data_pca - data_pca.mean()) / data_pca.std()
+data_pca_zs.describe()
+```
+
+```{python}
+data_pca_zs.shape
+```
+
+```{python}
+#| scrolled: false
+data_pca_zs.head(5)
+```
+
+## Now calculate two unsupervised fraud scores
+
+```{python}
+# Set the powers for the two Minkowski distances. The final results are relatively insensitive to these choices. 
+# Good choices are anywhere from 1 to about 4.
+p1 = 2
+p2 = 2
+ntop = 10000
+```
+
+### Calculate score 1
+
+```{python}
+oop1 = 1/p1
+score1 = (((data_pca_zs).abs()**p1).sum(axis=1))**oop1
+score1.head(10)
+```
+
+```{python}
+data_pca_zs.head(10)
+```
+
+```{python}
+score1.max()
+```
+
+### Autoencoder for score 2
+
+```{python}
+#| scrolled: false
+NNmodel = MLPRegressor(hidden_layer_sizes=(3),activation='logistic',max_iter=50,random_state=1)
+NNmodel.fit(data_pca_zs,data_pca_zs)
+```
+
+```{python}
+# calculate score 2 as the error of an autoencoder
+pca_out = NNmodel.predict(data_pca_zs)
+error = pca_out - data_pca_zs
+oop2 = 1/p2
+score2 = ((error.abs()**p2).sum(axis=1))**oop2
+```
+
+```{python}
+scores = pd.DataFrame(score1)
+scores.columns=['score1']
+scores['score2'] = score2
+scores['RECORD'] = save_record
+scores.head(10)
+```
+
+```{python}
+scores['score1 rank'] = scores['score1'].rank()
+scores['score2 rank'] = scores['score2'].rank()
+scores.head(20)
+```
+
+```{python}
+# calculate the final score as the average of the two scores
+weight = .5
+scores['final'] = (weight*scores['score1 rank'] + (1-weight)*scores['score2 rank'])
+scores_sorted = scores.sort_values(by='final', ascending=False)
+scores_sorted.head(20)
+```
+
+```{python}
+scores_sorted.tail(10)
+```
+
+```{python}
+scores.describe()
+```
+
+```{python}
+scores_sorted.describe()
+```
+
+```{python}
+scores_sorted.set_index('RECORD', drop=True, inplace=True)
+scores_sorted.head(10)
+```
+
+```{python}
+sc1max = int(score1.max())
+plt.hist(score1, bins =100, range=(0,sc1max+1))
+plt.yscale('log')
+plt.ylim(ymin=.1)
+```
+
+```{python}
+sc2max = int(score2.max())
+sc2max
+```
+
+```{python}
+sc2max = int(score2.max())
+print(sc2max)
+plt.hist(score2, bins =100, range=(0,sc2max+1))
+plt.yscale('log')
+plt.ylim(ymin=.1)
+```
+
+The flatter the next plot, the more similar are the two scores. 
+If the two scores are very similar then the rank order hardly changes and the plot is flat.
+
+```{python}
+sns.displot(scores['final'])
+```
+
+```{python}
+top_records = scores_sorted.head(ntop).index
+print(top_records)
+```
+
+```{python}
+data_zs['RECORD'] = save_record
+data_zs.set_index('RECORD', inplace=True, drop=True)
+data_zs.head()
+```
+
+```{python}
+#| scrolled: false
+scores.set_index('RECORD',inplace=True)
+scores.drop(columns=['score1','score2'],inplace=True)
+scores.head(30)
+```
+
+```{python}
+scores.tail(30)
+```
+
+```{python}
+NY_data_with_scores = NY_data_orig.join(scores, on='RECORD')
+NY_data_with_scores['final'].fillna(1,inplace=True)
+NY_data_with_scores
+```
+
+```{python}
+NY_data_scored_and_sorted = NY_data_with_scores.sort_values(by=['final','RECORD'], ascending = [False,True])
+NY_data_scored_zs = NY_data_with_scores.join(data_zs, on='RECORD')
+NY_data_scored_zs.set_index('RECORD',inplace=True)
+NY_data_scored_zs.head(20)
+```
+
+```{python}
+NY_data_scored_zs_sorted = NY_data_scored_zs.sort_values(by=['final','RECORD'], ascending = [False,True])
+NY_data_top_n = NY_data_scored_zs_sorted.head(ntop)
+NY_data_top_n
+```
+
+```{python}
+NY_data_top_n['OWNER'].head(40)
+```
+
+```{python}
+# you can look at this list and add some to the exclusions if you want
+plt.figure(figsize=(6,14))
+NY_data_top_n['OWNER'].value_counts().head(50).sort_values().plot(kind='barh')
+```
+
+```{python}
+NY_data_top_n.shape
+```
+
+```{python}
+NY_top_lotsize_ne_0 = NY_data_top_n[NY_data_top_n['LTFRONT'] != 0]
+NY_top_sizes_ne_0 = NY_top_lotsize_ne_0[NY_top_lotsize_ne_0['BLDDEPTH'] != 0]
+```
+
+```{python}
+nfields = 34
+data_base_vars = NY_data_top_n.iloc[:,nfields:nfields+9]
+data_base_vars.head()
+```
+
+```{python}
+# The heatmaps are good for seeing which variables are driving the high scores
+data_heatmap = data_base_vars.abs().head(23)
+plt.rcParams['figure.figsize'] = (20,10)
+ax = sns.heatmap(data_heatmap, center=0, vmin=0, vmax=50, cmap='Reds')
+ax.xaxis.tick_top()
+ax.xaxis.set_label_position('top')
+plt.xticks(rotation=90)
+```
+
+```{python}
+data_all_vars = NY_data_top_n.iloc[:,nfields:]
+data_all_vars.head()
+```
+
+```{python}
+data_heatmap = data_all_vars.abs().head(30)
+plt.rcParams['figure.figsize'] = (20,10)
+ax = sns.heatmap(data_heatmap, center=0, vmin=0, vmax=50, cmap='Reds')
+ax.xaxis.tick_top()
+ax.xaxis.set_label_position('top')
+plt.xticks(rotation=90)
+```
+
+```{python}
+top_records_df = pd.DataFrame(top_records)
+```
+
+
+
