@@ -1,0 +1,140 @@
+---
+title: Online Sales Data Dashboard
+format: 
+    html
+---
+This is a interaction dashboard using Panel in Python. This is the result:
+
+![dashboard](dashboard.png)
+
+Below is step by step how I create this dashboad. To serve the dashboard locally, clone this repo: https://github.com/rsm-dtt006/Interaction-Dashboard  and use the command:
+
+```
+panel serve interactive_dashboard.ipynb
+```
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import panel as pn
+pn.extension('tabulator')
+
+import hvplot.pandas
+```
+
+
+
+```{python}
+df = pd.read_csv('Online Sales Data.csv')
+```
+
+### Some minor data preprocessing
+```{python}
+df['Date'] = pd.to_datetime(df['Date'])  # Ensure the Date column is in datetime format
+df['Month'] = df['Date'].dt.month  # Extract the month
+df['Day Name'] = df['Date'].dt.strftime('%A')
+df
+```
+
+
+### Total Sales over time by Regions
+
+```{python}
+#Define Panel Widget
+month_slider = pn.widgets.IntSlider(name='Month Slider', start= 1, end=8, step=1, value=8)
+# Make DataFrame Pipeline Interactive
+idf = df.interactive()
+```
+
+
+```{python}
+regions = df['Region'].unique().tolist()
+regions
+```
+
+
+```{python}
+revenue_pipeline = (
+    idf[
+        (idf.Month <= month_slider) &
+        (idf['Region'].isin(regions))
+    ]
+    .groupby(['Region', 'Month'])['Total Revenue'].sum()
+    .to_frame()
+    .reset_index()
+    .sort_values(by = 'Month')
+    .reset_index(drop = True)
+)
+revenue_plot = revenue_pipeline.hvplot(x = 'Month', by = 'Region', y = 'Total Revenue', line_width = 2, title = 'Total Revenue over months by Regions')
+revenue_plot
+```
+
+### Table - Total Sales Overtime by Regions
+
+```{python}
+revenue_table = revenue_pipeline.pipe(pn.widgets.Tabulator, pagination='remote', page_size = 10, sizing_mode='stretch_width') 
+revenue_table
+```
+
+(3) Total Revenue by Date
+```{python}
+revenue_date = df.groupby('Date')['Total Revenue'].sum().hvplot(grid=True, figsize=(12, 6), title='Total Revenue Over Time', xlabel='Date', ylabel='Total Revenue')
+revenue_date
+```
+
+
+### Barchart : Unit sales by Product Category
+
+```{python}
+day_name = df['Day Name'].unique().tolist()
+products = df['Product Category'].unique().tolist()
+
+day_select = pn.widgets.Select(name='Day Select', options= day_name)
+day_select
+```
+
+```{python}
+unit_sale_pipeline = (
+    idf[
+        (idf['Day Name'] == day_select) &
+        idf['Product Category'].isin(products)
+    ]
+    .groupby(['Day Name', 'Product Category'])['Units Sold'].sum()  # Corrected line
+    .to_frame()
+    .reset_index()
+    .reset_index(drop = True)
+)
+unit_sale_pipeline
+```
+
+
+```{python}
+unit_plot = unit_sale_pipeline.hvplot(x = 'Product Category', y = 'Units Sold', kind = 'bar', title = 'Unit Sold by Product Categories Over Day', rot = 45)
+unit_plot
+```
+
+
+
+### Creating Dashboard
+```{python}
+template = pn.template.FastListTemplate(
+    title='Online Sales Data dashboard', 
+    sidebar=[pn.pane.Markdown("# Online Sales Data"), 
+             pn.pane.Markdown("This dataset provides a comprehensive overview of online sales transactions across different product categories. Each row represents a single transaction with detailed information such as the order ID, date, category, product name, quantity sold, unit price, total price, region, and payment method."),
+             month_slider
+             ],
+    main=[pn.Row(pn.Column(
+                           revenue_plot, margin=(0,25)), 
+                 revenue_table.panel(width=500)), 
+          pn.Row(pn.Column(revenue_date, margin=(0,25)), 
+                 pn.Column(day_select, unit_plot))],
+    accent_base_color="#88d8b0",
+    header_background="#88d8b0",
+)
+# template.show()
+template.servable();
+```
+
+
+

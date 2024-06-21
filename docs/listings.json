@@ -24,6 +24,7 @@
     "items": [
       "/visualization/A:Btesting/index.html",
       "/visualization/cg/index.html",
+      "/visualization/interact_dash/index.html",
       "/visualization/Possion/index.html",
       "/visualization/Customer_Churn/index.html"
     ]
