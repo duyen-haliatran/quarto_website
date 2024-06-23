@@ -14,11 +14,9 @@ engine: knitr
 ::: {.justify}
 In this project, we developed a comprehensive fraud detection model using a methodical approach
 outlined in five primary stages: data preparation, feature engineering, feature selection, model
-evaluation and implementation. The culmination of this project in the deployment of an
-XGBoost-based fraud detection model represents a significant step forward in safeguarding our
-operations against fraudulent activities. The model’s performance, evidenced by substantial
-potential savings and a strategic 5% cutoff point, highlights its effectiveness in identifying
-high-risk transactions with precision.
+evaluation and implementation. 
+
+![Workflow](workflow.png)
 
 Model Methodology:
 
@@ -30,7 +28,18 @@ Model Methodology:
 - Neural Network
 - XGB
 
-:::
 
+![Model Exploration](model.png)
+
+
+![Final Model](final_model.png)
+
+The culmination of this project in the deployment of an
+XGBoost-based fraud detection model represents a significant step forward in safeguarding our
+operations against fraudulent activities. The model’s performance, evidenced by substantial
+potential savings and a strategic 5% cutoff point, highlights its effectiveness in identifying
+high-risk transactions with precision.
+
+:::
 
 {{< pdf Project_Report.pdf width=100% height=800 >}}
