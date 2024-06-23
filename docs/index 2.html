@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Website - My Projects</title>
+<title>Website</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -30,12 +30,9 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-listing/list.min.js"></script>
-<script src="site_libs/quarto-listing/quarto-listing.js"></script>
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
@@ -68,65 +65,7 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
-<script>
 
-  window.document.addEventListener("DOMContentLoaded", function (_event) {
-    const listingTargetEl = window.document.querySelector('#listing-listing .list');
-    if (!listingTargetEl) {
-      // No listing discovered, do not attach.
-      return; 
-    }
-
-    const options = {
-      valueNames: ['listing-title','listing-author','listing-date','listing-image','listing-description',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
-      
-      searchColumns: ["listing-title","listing-author","listing-date","listing-image","listing-description"],
-    };
-
-    window['quarto-listings'] = window['quarto-listings'] || {};
-    window['quarto-listings']['listing-listing'] = new List('listing-listing', options);
-
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  });
-
-  window.addEventListener('hashchange',() => {
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  })
-  </script>
-
-  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
-
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -149,11 +88,11 @@ window.Quarto = {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./index.html"> 
+    <a class="nav-link active" href="./index.html" aria-current="page"> 
 <span class="menu-text">About</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./projects.html" aria-current="page"> 
+    <a class="nav-link" href="./projects.html"> 
 <span class="menu-text">Projects</span></a>
   </li>  
   <li class="nav-item">
@@ -168,370 +107,124 @@ window.Quarto = {
     </nav>
 </header>
 <!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#hello-im-duyen-tran---business-analyst-extraordinaire" id="toc-hello-im-duyen-tran---business-analyst-extraordinaire" class="nav-link active" data-scroll-target="#hello-im-duyen-tran---business-analyst-extraordinaire">Hello, I’m Duyen Tran 👋 - Business Analyst Extraordinaire</a>
+  <ul class="collapse">
+  <li><a href="#about-me" id="toc-about-me" class="nav-link" data-scroll-target="#about-me">🌟 About Me</a>
+  <ul class="collapse">
+  <li><a href="#education" id="toc-education" class="nav-link" data-scroll-target="#education">📚 Education</a></li>
+  <li><a href="#tools-techniques" id="toc-tools-techniques" class="nav-link" data-scroll-target="#tools-techniques">🛠️ Tools &amp; Techniques:</a></li>
+  <li><a href="#my-work-history" id="toc-my-work-history" class="nav-link" data-scroll-target="#my-work-history">💼 My Work History</a></li>
+  <li><a href="#some-of-my-work" id="toc-some-of-my-work" class="nav-link" data-scroll-target="#some-of-my-work">📈 Some of My Work:</a></li>
+  <li><a href="#connect-with-me" id="toc-connect-with-me" class="nav-link" data-scroll-target="#connect-with-me">🌐 Connect with Me:</a></li>
+  <li><a href="#looking-forward" id="toc-looking-forward" class="nav-link" data-scroll-target="#looking-forward">🎯 Looking Forward:</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">My Projects</h1>
-</div>
+<main class="content column-page-left" id="quarto-document-content">
 
 
 
-<div class="quarto-title-meta">
 
-    
-  
-    
+<div class="quarto-about-marquee content column-page-left">
+  <div class="about-image-container">
+    <img src="files/profile_pic.jpg" class="about-image " style="width: 100%;">
   </div>
-  
+  <div class="about-contents">
+     <div id="main-content">
+<section id="hello-im-duyen-tran---business-analyst-extraordinaire" class="level1">
+<h1>Hello, I’m Duyen Tran 👋 - Business Analyst Extraordinaire</h1>
+<section id="about-me" class="level2">
+<h2 data-anchor-id="about-me">🌟 About Me</h2>
+<p>I bridge the gap between IT and business, translating complex business needs into actionable technical requirements. With a background in diverse job experience, I pride myself on being the lynchpin that ensures project success.</p>
+<ul>
+<li>📊 Currently leveraging data analytics to drive business improvements.</li>
+<li>📘 Continuing my learning journey in data science to enrich my BA toolkit at UC San Diego.</li>
+<li>💼 Previously collaborated with cross-functional teams in the finance and healthcare sectors.</li>
+<li>📫 Reach out to me at: <a href="mailto:duyen.tran@rady.ucsd.edu">duyen.tran@rady.ucsd.edu</a></li>
+<li>⚡ Fun fact: In my free time, I enjoy making handmade things and exploring local coffee shops.</li>
+</ul>
+<section id="education" class="level3">
+<h3 data-anchor-id="education">📚 Education</h3>
+<ul>
+<li>MS in Business Analytics - University of California, San Diego (2023 - 2024)</li>
+<li>MBA in International Marketing - Management Development Institute of Singapore (2018 - 2019)</li>
+<li>BA in Real Estates - National Economics University, Viet Nam (2013 - 2017)</li>
+</ul>
+</section>
+<section id="tools-techniques" class="level3">
+<h3 data-anchor-id="tools-techniques">🛠️ Tools &amp; Techniques:</h3>
+<ul>
+<li><strong>Documentation</strong>: User Stories, Use Cases</li>
+<li><strong>Data Analysis</strong>: Excel, SQL, PostgreSQL, Python(Especially: Pandas, Numpy, Scipy, Matplotlib), R(Especially: Tidyverse, Simmer)</li>
+</ul>
+</section>
+<section id="my-work-history" class="level3">
+<h3 data-anchor-id="my-work-history">💼 My Work History</h3>
+<ul>
+<li>Product Manager/Analyst (Feb 2020 - Dec 2023)</li>
+<li>Digital Marketing Analyst (Jul 2017 - Feb 2020)</li>
+<li>Appraiser Intern (Jan 2017 - Jun 2017)</li>
+</ul>
+</section>
+<section id="some-of-my-work" class="level3">
+<h3 data-anchor-id="some-of-my-work">📈 Some of My Work:</h3>
+<ul>
+<li><strong>Financial Forecasting Tool</strong>: Collaborated with finance experts to develop a tool that predicts quarterly revenue.</li>
+<li><strong>E-Commerce Recommendation Engine</strong>: Worked with the marketing department to integrate a product recommendation system into an online marketplace.</li>
+</ul>
+</section>
+<section id="connect-with-me" class="level3">
+<h3 data-anchor-id="connect-with-me">🌐 Connect with Me:</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="https://www.linkedin.com/in/duyentran14//"><img src="https://img.shields.io/badge/-DUYENTRAN-blue?style=flat-square&amp;logo=LinkedIn&amp;logoColor=white&amp;link=https://www.linkedin.com/in/duyentran14/.png" class="img-fluid figure-img" alt="LinkedIn Badge"></a></p>
+<figcaption>LinkedIn Badge</figcaption>
+</figure>
+</div>
+</section>
+<section id="looking-forward" class="level3">
+<h3 data-anchor-id="looking-forward">🎯 Looking Forward:</h3>
+<p>I’m keen on integrating more data science techniques into my BA toolkit. If you have any course or book recommendations or any collaboration opportunities, please drop me a message!</p>
+<hr>
+<p>⭐️ From <a href="https://github.com/rsm-dtt006">DuyenTran</a></p>
+</section>
+</section>
+</section>
+</div> 
+    <div class="about-footer"><div class="about-links">
+  <a href="mailto:dtt006@ucsd.edu" class="about-link" rel="" target="">
+    <i class="bi bi-envelope"></i>
+     <span class="about-link-text"></span>
+  </a>
+  <a href="https://www.linkedin.com/in/duyentran14/" class="about-link" rel="" target="">
+    <i class="bi bi-linkedin"></i>
+     <span class="about-link-text"></span>
+  </a>
+  <a href="https://github.com/rsm-dtt006" class="about-link" rel="" target="">
+    <i class="bi bi-github"></i>
+     <span class="about-link-text"></span>
+  </a>
+</div>
+</div>
+  </div>
+</div>
 
 
-</header>
 
 
 
-
-
-
-<div class="quarto-listing quarto-listing-container-grid" id="listing-listing">
-<div class="list grid quarto-listing-cols-3">
-<div class="g-col-1" data-index="0" data-listing-file-modified-sort="1719081319150" data-listing-reading-time-sort="1" data-listing-word-count-sort="101">
-<a href="./projects/fraud/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/fraud/workflow.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Fraud Detection Report
-</h5>
-<div class="card-text listing-description">
-In this project, we developed a comprehensive fraud detection model using a methodical approach outlined in five primary stages: data preparation, feature engineering…
-</div>
-<div class="card-attribution card-text-small start">
-<div class="listing-author">
-
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="1" data-listing-file-modified-sort="1718397483616" data-listing-reading-time-sort="13" data-listing-word-count-sort="2529">
-<a href="./projects/Unusual_properties/NY_OG.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/Unusual_properties/NY_OG_files/figure-html/cell-15-output-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Unsupervised anomaly detection (fraud) algorithm
-</h5>
-<div class="card-text listing-description">
-This project has good example algorithms to do a forensic-type analysis, looking for anomalies in a dataset. We first do some data cleaning (exclusions, imputation, don’t…
-</div>
-<div class="card-attribution card-text-small start">
-<div class="listing-author">
-
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="2" data-listing-file-modified-sort="1717116235374" data-listing-reading-time-sort="10" data-listing-word-count-sort="1928">
-<a href="./projects/optimizing_online/final.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="listing-item-img-placeholder card-img-top" style="height: 150px;">&nbsp;</div>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Optimizing Online Sport Retail Revenue
-</h5>
-<div class="card-text listing-description">
-Sports clothing is a booming sector!
-</div>
-<div class="card-attribution card-text-small start">
-<div class="listing-author">
-
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="3" data-listing-file-modified-sort="1719170970772" data-listing-reading-time-sort="8" data-listing-word-count-sort="1527">
-<a href="./projects/Debt_analyzing/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="listing-item-img-placeholder card-img-top" style="height: 150px;">&nbsp;</div>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Analyze International Debt Statistic
-</h5>
-<div class="card-text listing-description">
-It’s not that we humans only take debts to manage our necessities. A country may also take debt to manage its economy. For example, infrastructure spending is one costly…
-</div>
-<div class="card-attribution card-text-small start">
-<div class="listing-author">
-
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="4" data-listing-file-modified-sort="1719171118486" data-listing-reading-time-sort="14" data-listing-word-count-sort="2744">
-<a href="./projects/new/Shared_social_group.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/new/Shared_social_group_files/figure-html/cell-10-output-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-FLAT RATE PRICING
-</h5>
-<div class="card-text listing-description">
-This project using hypothesis to run A/B testing.
-</div>
-<div class="card-attribution card-text-small start">
-<div class="listing-author">
-
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="5" data-listing-file-modified-sort="1717117361425" data-listing-reading-time-sort="12" data-listing-word-count-sort="2229">
-<a href="./projects/cc_approval/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="listing-item-img-placeholder card-img-top" style="height: 150px;">&nbsp;</div>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Credit card applications
-</h5>
-<div class="card-text listing-description">
-
-Commercial banks receive <em>a lot</em> of applications for credit cards. Many of them get rejected for many reasons, like high loan balances, low income levels, or too many…
-</div>
-<div class="card-attribution card-text-small start">
-<div class="listing-author">
-
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="6" data-listing-file-modified-sort="1715996302916" data-listing-reading-time-sort="35" data-listing-word-count-sort="6969">
-<a href="./projects/cg-uplift/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/cg-uplift/index_files/figure-html/cell-17-output-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Machine Learning for Uplift
-</h5>
-<div class="card-text listing-description">
-This project will provide insights into the relative strengths and weaknesses of each modeling approach in the context of direct marketing, with a particular focus on…
-</div>
-<div class="card-attribution card-text-small start">
-<div class="listing-author">
-Duyen Tran
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="7" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1716502986300" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="28" data-listing-word-count-sort="5454">
-<a href="./projects/cg_prop/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/cg_prop/index_files/figure-html/cell-12-output-2.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-CG Propensity
-</h5>
-<div class="card-text listing-description">
-CG has tasked me with developing a predictive model utilizing the “Space Pirates” game data. The primary objective is to identify which gamers are more or less inclined to…
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="8" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1716065586698" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="22" data-listing-word-count-sort="4309">
-<a href="./projects/conjoint/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="listing-item-img-placeholder card-img-top" style="height: 150px;">&nbsp;</div>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Conjoint
-</h5>
-<div class="card-text listing-description">
-This assignment uses uses the MNL model to analyze (1) yogurt purchase data made by consumers at a retail location, and (2) conjoint data about consumer preferences for…
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="9" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1716763333285" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="39" data-listing-word-count-sort="7768">
-<a href="./projects/Pentathlon/pentathlon_nptb.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/Pentathlon/pentathlon_nptb_files/figure-html/cell-8-output-2.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Pentathlon: Next Product to Buy Models
-</h5>
-<div class="card-text listing-description">
-PROJECT SUMMARY
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="10" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1718038721090" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="13" data-listing-word-count-sort="2509">
-<a href="./projects/Segmentation/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/Segmentation/index_files/figure-html/cell-5-output-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Segmentation Methods
-</h5>
-<div class="card-text listing-description">
-Market segmentation is the process of dividing a broad consumer or business market, normally consisting of existing and potential customers, into sub-groups of consumers…
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="11" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1716688029178" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="42" data-listing-word-count-sort="8268">
-<a href="./projects/intuit/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/intuit/index_files/figure-html/cell-4-output-2.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Intuit Upgrade Notebook
-</h5>
-<div class="card-text listing-description">
-This analytical examines the efficacy of an upsell campaign targeting small businesses to upgrade to the latest QuickBooks software, based on a dataset of 75,000 entities…
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="12" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1717107963538" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="11" data-listing-word-count-sort="2082">
-<a href="./projects/variable_importance/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<div class="listing-item-img-placeholder card-img-top" style="height: 150px;">&nbsp;</div>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Key Drivers Analysis
-</h5>
-<div class="card-text listing-description">
-Key Driver Analysis (KDA) is a statistical technique used to determine the factors (or “drivers”) that most significantly impact a particular outcome or dependent variable.…
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="13" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1713327061000" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="41" data-listing-word-count-sort="8118">
-<a href="./projects/replicate/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/replicate/index_files/figure-html/cell-26-output-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-A Replication of Karlan and List
-</h5>
-<div class="card-text listing-description">
-The data set contains 50,083 observations and 51 variables. The key variables are as follows:
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-<div class="g-col-1" data-index="14" data-listing-date-sort="1719126000000" data-listing-file-modified-sort="1714672302566" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="17" data-listing-word-count-sort="3300">
-<a href="./projects/poisson_reg/index.html" class="quarto-grid-link">
-<div class="quarto-grid-item card h-100 card-left">
-<p class="card-img-top"><img src="projects/poisson_reg/index_files/figure-html/cell-5-output-1.png" style="height: 150px;"  class="thumbnail-image card-img"/></p>
-<div class="card-body post-contents">
-<h5 class="no-anchor card-title listing-title">
-Poisson Regression Examples
-</h5>
-<div class="card-text listing-description">
-Blueprinty is a small firm that makes software for developing blueprints specifically for submitting patent applications to the US patent office. Their marketing team would…
-</div>
-<div class="card-attribution card-text-small justify">
-<div class="listing-author">
-Duyen Tran
-</div>
-<div class="listing-date">
-Jun 23, 2024
-</div>
-</div>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="listing-no-matching d-none">
-No matching items
-</div>
-</div></main> <!-- /main -->
+</main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
@@ -552,13 +245,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     }
   }
   toggleBodyColorPrimary();  
-  const icon = "";
-  const anchorJS = new window.AnchorJS();
-  anchorJS.options = {
-    placement: 'right',
-    icon: icon
-  };
-  anchorJS.add('.anchored');
   const isCodeAnnotation = (el) => {
     for (const clz of el.classList) {
       if (clz.startsWith('code-annotation-')) {                     
