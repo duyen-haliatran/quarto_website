@@ -158,7 +158,7 @@ import seaborn as sns
 sns.set_style("whitegrid")
 
 # Create a 1x2 subplot to visualize both Price and UnitPrice
-fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6))
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 
 # Boxplot for Price vs Number
 sns.boxplot(x='Number', y='Price', data=nyop, ax=axes[0])

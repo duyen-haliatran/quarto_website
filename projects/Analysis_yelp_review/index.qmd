@@ -1,0 +1,723 @@
+---
+title: Yelp Reviews NLP Analysis
+---
+
+
+This notebook performs a basic NLP analysis on Yelp reviews data. The analysis includes text preprocessing, word frequency analysis, and sentiment analysis using the NLTK and TextBlob packages then compare the results with Vader package.
+
+## Import Libraries
+
+First, we import the necessary libraries for our analysis.
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import re
+from collections import Counter
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from textblob import TextBlob
+import matplotlib.pyplot as plt
+from gensim.models import Word2Vec
+from sklearn.decomposition import PCA
+from wordcloud import WordCloud
+import networkx as nx
+import multiprocessing
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# Download necessary NLTK data
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+nltk.download('vader_lexicon')
+```
+
+```{python}
+# Load the dataset
+file_path = 'yelp.csv'
+yelp_df = pd.read_csv(file_path)
+yelp_df.head()
+```
+
+## Data Preparation
+
+```{python}
+yelp_df.dtypes
+```
+
+```{python}
+yelp_stats = pd.DataFrame(yelp_df.count(),columns=['count'])
+yelp_stats['isna'] = yelp_df.isna().sum()
+yelp_stats['% pop'] = 1 - yelp_df.isna().sum()/len(yelp_df)
+yelp_stats
+```
+
+```{python}
+yelp_df.describe(include = 'all').transpose()
+```
+
+```{python}
+def count_zeros(data):
+    count = 0
+    for i in data:
+        if i == 0:
+            count += 1
+    return count
+
+numerics = ['date','stars', 'cool', 'useful', 'funny']
+categoricals = ['business_id', 'review_id', 'text','type', 'user_id']
+statistics_of_data1 = []
+
+for col in numerics:
+    num_zeros = count_zeros(yelp_df[col])
+    percent_zeros = num_zeros / yelp_df.shape[0] * 100
+    if pd.api.types.is_numeric_dtype(yelp_df[col]):
+        min_val = round(yelp_df[col].min(), 2)
+        max_val = round(yelp_df[col].max(), 2)
+        mean_val = yelp_df[col].mean()
+        std_val = round(np.std(yelp_df[col]), 2)
+    else:
+        min_val = max_val = mean_val = std_val = None
+
+    statistics_of_data1.append((col,
+                                'numeric',
+                                yelp_df[col].notnull().sum(),
+                                f'{yelp_df[col].notnull().sum()/yelp_df.shape[0]*100:.1f}%',
+                                count_zeros(yelp_df[col]),
+                                min_val,
+                                max_val,
+                                mean_val,
+                                std_val,
+                                yelp_df[col].mode()[0]
+                                ))
+
+stats_dfnum = pd.DataFrame(statistics_of_data1, columns = ['Field Name', 'Field Type','# Records Have Values', '% Populated', '# Zeros', 'Min', 'Max', 'Mean', 'Standard Deviation', 'Most Common'])
+stats_dfnum
+```
+
+```{python}
+statistics_of_data = []
+for col in categoricals:
+    statistics_of_data.append((col,
+                             'categorical',
+                             yelp_df[col].notnull().sum(),
+                             f'{yelp_df[col].notnull().sum()/yelp_df.shape[0]*100:.1f}%',
+                             count_zeros(yelp_df[col]),
+                             yelp_df[col].nunique(),
+                             yelp_df[col].mode()[0]
+                            
+                             ))
+stats_dfcat = pd.DataFrame(statistics_of_data, columns = ['Field Name', 'Field Type','# Records Have Values', '% Populated', '# Zeros','# Unique Values', 'Most Common',])
+stats_dfcat
+```
+
+Check out the full version of Data Quality Report here: (UCSD only)
+
+https://docs.google.com/document/d/1ZR3nWFwd22BlWZ_fuy1P_Qn1lHNDMKP9PdH0xeeXMmE/edit?usp=sharing
+
+
+### EDA
+
+```{python}
+yelp_df['text_length'] = yelp_df['text'].apply(len)
+```
+
+```{python}
+sns.set(style="white")
+
+g = sns.FacetGrid(yelp_df, col="stars", sharey=False)
+g.map(plt.hist, 'text_length', bins=30)
+```
+
+All histograms show a right-skewed distribution, indicating that the most reviews are relatively short, with fewer long reviews. The peak text length decreases as the star rating increase, which means the peak of 1-star reviews is at a lower text length and the peak of 5-star reviews is at a slightly higher text length compared to lower ratings.
+
+The higher star ratings tend to have slightly longer reviews, this might suggest that users who are very satiisfied with their experence are more likely to write detailed reviews
+
+```{python}
+# Plot the countplot
+sns.countplot(x='stars', data=yelp_df)
+plt.show()
+```
+
+```{python}
+yelp_df.dtypes
+```
+
+## Text Preprocessing
+
+Define a function to preprocess the text by steps:
+
+- Remove html tags: Clean up the text by removing any HTML markup
+
+- Remove non-alphabet characters: Ensure that the text contains only alphabetic characters, removing numbers and punctuation.
+
+- Tokenize the text: Split the text into individual words and convert to lower case
+
+- Remove stopwords: Filter out common words that do not add significant meaning.
+
+```{python}
+#| ExecuteTime: {end_time: '2024-07-04T21:52:41.796400100Z', start_time: '2024-07-04T21:52:32.905308800Z'}
+#| collapsed: false
+# Define a function to preprocess the text
+def preprocess_text(text):
+    # Remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+    
+    # Remove non-alphabet characters
+    text = re.sub(r'[^a-zA-Z]', ' ', text)
+    
+    # Tokenize the text
+    tokens = word_tokenize(text.lower())
+    
+    # Remove stopwords
+    stop_words = set(stopwords.words('english'))
+    filtered_tokens = [word for word in tokens if word.isalnum() and word not in stop_words]
+    return filtered_tokens
+
+# Apply preprocessing to all reviews
+yelp_df['tokens'] = yelp_df['text'].apply(preprocess_text)
+```
+
+```{python}
+yelp_df['tokens'].head()
+```
+
+## Word Frequency Analysis
+
+Perform a frequency analysis to find the most common words in the reviews.
+
+```{python}
+#| ExecuteTime: {end_time: '2024-07-04T21:52:41.951888Z', start_time: '2024-07-04T21:52:41.774461300Z'}
+#| collapsed: false
+# Flatten the list of tokens for frequency analysis
+all_tokens = [token for tokens in yelp_df['tokens'] for token in tokens]
+freq_dist = Counter(all_tokens)
+
+# Show the top 10 most common words
+common_words = freq_dist.most_common(20)
+print(common_words)
+```
+
+Notice that words that are frequent in the context of reviews but don't carry a strong sentiment themselves such as: "food", "place", "service","restaurant"...and some stop words in the common words list such as: "us", "always", "also", "even"... still haven't been filtered out.These could lead to the incorrect sentiment analysis (e.g: the common words of positive and negative review are the same). So let's refind the process
+
+```{python}
+# Define a function to preprocess the text
+def preprocess_text(text):
+    # Remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+    
+    # Remove non-alphabet characters
+    text = re.sub(r'[^a-zA-Z]', ' ', text)
+    
+    # Tokenize the text
+    tokens = word_tokenize(text.lower())
+    
+    # Remove stopwords
+    stop_words = set(stopwords.words('english')).union({'food', 'service', 'place', 'restaurant', 'us', 'always', 'even', 'little', 'also', 'really','would'})
+    
+    lemmatizer = WordNetLemmatizer()
+    
+    filtered_tokens = [lemmatizer.lemmatize(word) for word in tokens if word.isalnum() and word not in stop_words]
+    return filtered_tokens
+
+# Apply preprocessing to all reviews
+yelp_df['tokens'] = yelp_df['text'].apply(preprocess_text)
+```
+
+```{python}
+# Flatten the list of tokens for frequency analysis
+all_tokens = [token for tokens in yelp_df['tokens'] for token in tokens]
+freq_dist = Counter(all_tokens)
+
+# Show the top 10 most common words
+common_words = freq_dist.most_common(20)
+print(common_words)
+```
+
+```{python}
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(freq_dist)
+
+# Plot the word cloud
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('Word Cloud in data')
+plt.show()
+```
+
+## Sentiment Analysis
+
+### 1 TextBlob.
+
+#### 1.1 Perform sentiment analysis on the reviews
+
+TextBlob's sentiment analysis is based on the Pattern library and uses a combination of NLP techniques to determine the sentiment polarity and subjectivity.
+
+Polarity determines the sentiment of text. Its values lie in [-1, 1] where -1 denotes the highly negative sentiment and 1 denotes a highly positive sentiment.
+
+How TextBlob calculates sentiment score:
+
+1. Tokenization: The text is split into individual words, which we have done in the text preprocessing
+
+2. Lexicon Lookup: Each token is looked up in the sentiment lexicon to find its associated polarity and subjectivity scores.
+
+3. Score Aggregation: The polarity scores of individual words are aggregated to compute the overall polarity score of the text. This is usually done by averaging the scores.
+
+```{python}
+#| ExecuteTime: {end_time: '2024-07-04T21:52:48.106705200Z', start_time: '2024-07-04T21:52:41.888566200Z'}
+#| collapsed: false
+# Perform sentiment analysis using TextBlob
+yelp_df['textblob_score'] = yelp_df['text'].apply(lambda x: TextBlob(x).sentiment.polarity)
+```
+
+```{python}
+#| ExecuteTime: {end_time: '2024-07-04T21:52:48.255446500Z', start_time: '2024-07-04T21:52:48.052845500Z'}
+#| collapsed: false
+# Visualize the sentiment analysis
+plt.figure(figsize=(10, 6))
+plt.hist(yelp_df['textblob_score'], bins=20, color='skyblue', edgecolor='black')
+plt.title('Sentiment Analysis of Yelp Reviews')
+plt.xlabel('Sentiment Score')
+plt.ylabel('Frequency')
+plt.grid(True)
+plt.show()
+```
+
+This distribution is approximately bell-shaped and symmetric, centered around a positive sentiment score. The histogram is skewed towards the positive sidem indicating the most reviews have a slightly positive sentiment. This align with the stars distribution above where the majority of reviews are 4 and 5 stars.
+
+The predominance of mildly positive sentiment (around 0.25) suggests that while most customers are happy, there is still room for improvement to convert these mildly positive experiences into very positive ones.
+
+#### 1.2 Compare Sentiment with Star Ratings
+
+Compare sentiment scores with star ratings to see if there is a correlation.
+
+```{python}
+#| ExecuteTime: {end_time: '2024-07-04T21:52:48.612618600Z', start_time: '2024-07-04T21:52:48.186749100Z'}
+#| collapsed: false
+# Create a scatter plot to compare star ratings with sentiment scores
+plt.figure(figsize=(10, 6))
+plt.scatter(yelp_df['stars'], yelp_df['textblob_score'], alpha=0.5, color='blue')
+plt.title('Comparison of Star Ratings and Sentiment Scores')
+plt.xlabel('Star Ratings')
+plt.ylabel('Sentiment Score')
+plt.grid(True)
+plt.show()
+```
+
+While 4 and 5 star reviews has high concentration of positive sentiment score, typically around 0.6 to 1 and it's overwhelmingly positive as expected for 4 and 5 stars, the 1 star reviews show a wide range of sentiment scores. In another word, while most 1-star reviews are expectedly negative, there are some instances where the text may not be purely negative.
+
+#### 1.3 Positive Reviews
+
+##### Analyze Frequent Word in Positive Review
+
+```{python}
+# Filter reviews with positive sentiment scores
+positive_reviews = yelp_df[yelp_df['textblob_score'] > 0]
+
+# Flatten the list of tokens from negative reviews for frequency analysis
+positive_tokens = [token for tokens in positive_reviews['tokens'] for token in tokens]
+positive_freq_dist = Counter(positive_tokens)
+
+# Show the top 10 most common words in negative reviews
+positive_common_words = positive_freq_dist.most_common(10)
+print(positive_common_words)
+```
+
+##### Visualize Frequent Words in Positive Reviews
+
+```{python}
+# Visualize the most common words in negative reviews
+words, counts = zip(*positive_common_words)
+plt.figure(figsize=(10, 6))
+plt.bar(words, counts, color='skyblue', edgecolor='black')
+plt.title('Most Common Words in Positive Reviews')
+plt.xlabel('Words')
+plt.ylabel('Frequency')
+plt.show()
+```
+
+##### Relationship between words
+
+```{python}
+# Define the relationship between target word to others words
+
+def relationship_words(target_word, data):
+    # Get the number of available CPU cores
+    num_cores = multiprocessing.cpu_count()
+
+    model = Word2Vec(data['tokens'], vector_size=100, window=5, min_count=3, workers=num_cores)
+    model.train(yelp_df['tokens'], total_examples=len(yelp_df), epochs=30)
+    
+    # Get the most similar words
+    similar_words = model.wv.most_similar(target_word, topn=10)
+        
+    # Create a graph from the co-occurrence matrix
+    G = nx.Graph()
+    
+    # Add nodes and edges
+    for word, weight in similar_words:
+        G.add_edge(target_word, word, weight=weight)
+
+    # Draw the graph
+    plt.figure(figsize=(10, 10))
+    pos = nx.spring_layout(G, k=0.5)
+    nx.draw(G, pos, with_labels=True, node_size=3000, node_color='skyblue', font_size=15, font_weight='bold', edge_color='gray')
+    plt.title(f'Network Graph of Words with {target_word}')
+    plt.show()
+```
+
+Let's check the relationship of "good" and "great"
+
+```{python}
+relationship_words('good', yelp_df)
+```
+
+```{python}
+relationship_words('great', yelp_df)
+```
+
+#### 1.4 Negative Reviews
+
+##### Analyze Frequent Words in Negative Reviews
+
+Filter the reviews with negative sentiment scores and perform a word frequency analysis on these reviews.
+
+```{python}
+#| ExecuteTime: {end_time: '2024-07-04T21:52:48.613653100Z', start_time: '2024-07-04T21:52:48.341422400Z'}
+#| collapsed: false
+# Filter reviews with negative sentiment scores
+negative_reviews = yelp_df[yelp_df['textblob_score'] < 0]
+
+# Flatten the list of tokens from negative reviews for frequency analysis
+negative_tokens = [token for tokens in negative_reviews['tokens'] for token in tokens]
+negative_freq_dist = Counter(negative_tokens)
+
+# Show the top 10 most common words in negative reviews
+negative_common_words = negative_freq_dist.most_common(10)
+print(negative_common_words)
+```
+
+##### Visualize Frequent Words in Negative Reviews
+
+Create a bar chart to visualize the most common words in negative reviews.
+
+```{python}
+#| ExecuteTime: {end_time: '2024-07-04T21:52:48.812801300Z', start_time: '2024-07-04T21:52:48.374165300Z'}
+#| collapsed: false
+# Visualize the most common words in negative reviews
+words, counts = zip(*negative_common_words)
+plt.figure(figsize=(10, 6))
+plt.bar(words, counts, color='skyblue', edgecolor='black')
+plt.title('Most Common Words in Negative Reviews')
+plt.xlabel('Words')
+plt.ylabel('Frequency')
+plt.show()
+```
+
+##### Relationship among words
+
+The relationship among words of "like" and "one"
+
+```{python}
+relationship_words('like', yelp_df)
+```
+
+```{python}
+relationship_words('time', yelp_df)
+```
+
+### 2. VADER
+
+#### 2.1 Perform sentiment analysis
+
+The Compound score is a metric that calculates the sum of all the lexicon ratings which have been normalized between [-1, 1]. Similar to Textblob Polarity, -1 denotes the highly negative sentiment and 1 denotes a highly positive sentiment. By default, the VADER documentation suggests using a threshold where:
+
+- Positive Sentiment: Compound score ≥ 0.05
+
+- Neutral Sentiment: Compound score between -0.05 and 0.05
+
+- Negative Sentiment: Compound score ≤ -0.05
+
+```{python}
+# Basic preprocessing function
+def preprocess_text_for_vader(text):
+    text = re.sub(r'<.*?>', '', text)  # Remove HTML tags
+    text = re.sub(r'[^a-zA-Z\s]', '', text)  # Remove non-alphabet characters
+    text = text.lower()  # Convert to lowercase
+    return text
+
+# Apply basic preprocessing
+yelp_df['cleaned_text'] = yelp_df['text'].apply(preprocess_text_for_vader)
+```
+
+```{python}
+sentiment = SentimentIntensityAnalyzer()
+
+yelp_df['vader_score'] = yelp_df['cleaned_text'].apply(lambda x: sentiment.polarity_scores(x)['compound'])
+```
+
+```{python}
+# Visualize the sentiment analysis
+plt.figure(figsize=(10, 6))
+plt.hist(yelp_df['vader_score'], bins=20, color='skyblue', edgecolor='black')
+plt.title('Sentiment Analysis of Yelp Reviews')
+plt.xlabel('Vader Score')
+plt.ylabel('Frequency')
+plt.grid(True)
+plt.show()
+```
+
+The histogram shows a highly skewed distribution toward the positive end of the sentiment spectrum and the majority of sentiment score are concentrated between 0.75 to 1. This is consistent with the expectation that people are more likely leave positive feedback when satisfied
+
+#### 2.2 Compare Sentiment
+
+```{python}
+# Create a scatter plot to compare star ratings with sentiment scores
+plt.figure(figsize=(10, 6))
+plt.scatter(yelp_df['stars'], yelp_df['vader_score'], alpha=0.5, color='blue')
+plt.title('Comparison of Star Ratings and Sentiment Scores')
+plt.xlabel('Star Ratings')
+plt.ylabel('Sentiment Score')
+plt.grid(True)
+plt.show()
+```
+
+The sentiment scores for each star rating range broadly from -1 to 1.This could be due to mixed sentiments within the reviews or limitation in the sentiment analysis model.
+
+The posible reason could be:
+
+- Some reviews may contain both positive and negative comments, leading to mixed sentiment scores
+
+- Star ratings might not always reflext the text's sentiment accurately.
+
+- Vader considers aspects like punctuation, capitalization and intensifiers. If reviews use strong language or emphatic expressions, this can skew the sentiment score
+
+#### 2.3 Positive Reviews
+
+```{python}
+# Filter reviews with positive sentiment scores
+positive_reviews_vader = yelp_df[yelp_df['vader_score'] > 0.5]
+
+# Flatten the list of tokens from negative reviews for frequency analysis
+positive_tokens = [token for tokens in positive_reviews_vader['tokens'] for token in tokens]
+positive_freq_dist = Counter(positive_tokens)
+
+# Show the top 10 most common words in negative reviews
+positive_common_words = positive_freq_dist.most_common(10)
+print(positive_common_words)
+```
+
+```{python}
+# Visualize the most common words in negative reviews
+words, counts = zip(*positive_common_words)
+plt.figure(figsize=(10, 6))
+plt.bar(words, counts, color='skyblue', edgecolor='black')
+plt.title('Most Common Words in Positive Reviews')
+plt.xlabel('Words')
+plt.ylabel('Frequency')
+plt.show()
+```
+
+#### 2.4 Negative Reviews
+
+```{python}
+# Filter reviews with positive sentiment scores
+negative_reviews_vader = yelp_df[yelp_df['vader_score'] <  -0.5]
+
+# Flatten the list of tokens from negative reviews for frequency analysis
+negative_tokens = [token for tokens in negative_reviews_vader['tokens'] for token in tokens]
+negative_freq_dist = Counter(negative_tokens)
+
+# Show the top 10 most common words in negative reviews
+negative_common_words = negative_freq_dist.most_common(10)
+print(negative_common_words)
+```
+
+```{python}
+# Visualize the most common words in negative reviews
+words, counts = zip(*negative_common_words)
+plt.figure(figsize=(10, 6))
+plt.bar(words, counts, color='skyblue', edgecolor='black')
+plt.title('Most Common Words in Negative Reviews')
+plt.xlabel('Words')
+plt.ylabel('Frequency')
+plt.show()
+```
+
+### Compare Accuracy of both VADER and TexrBlob
+
+Assume the following mapping:
+
+* 1-2 stars: Negative sentiment
+
+* 3 stars: Neutral sentiment
+
+* 4-5 stars: Positive sentiment
+
+```{python}
+# Define function to convert star ratings to sentiment labels
+def sentiment_label(stars):
+    if stars >= 4:
+        return 'positive'
+    elif stars <= 2:
+        return 'negative'
+    else:
+        return 'neutral'
+    
+# Apply the function to create a new column
+yelp_df['actual_sentiment'] = yelp_df['stars'].apply(sentiment_label)
+```
+
+```{python}
+# Convert predicted sentiment for both TextBlob and VADER to sentiment label
+def textblob_sentiment_label(score):
+    if score > 0:
+        return 'positive'
+    elif score < 0:
+        return 'negative'
+    else:
+        return 'neutral'
+    
+def vader_sentiment_label(score):
+    if score > 0.5:
+        return 'positive'
+    elif score < -0.5:
+        return 'negative'
+    else:
+        return 'neutral'
+    
+# Apply the functions to yelp_df
+yelp_df['sentiment_textblob'] = yelp_df['textblob_score'].apply(textblob_sentiment_label)
+yelp_df['sentiment_vader'] = yelp_df['vader_score'].apply(vader_sentiment_label)
+```
+
+```{python}
+from sklearn.metrics import accuracy_score
+
+# Calculate the accuracy of TextBlob sentiment analysis
+textblob_accuracy = accuracy_score(yelp_df['actual_sentiment'], yelp_df['sentiment_textblob'])
+
+# Calculate the accuracy of VADER sentiment analysis
+vader_accuracy = accuracy_score(yelp_df['actual_sentiment'], yelp_df['sentiment_vader'])
+
+print(f'TextBlob Accuracy: {textblob_accuracy:.2f}')
+print(f'VADER Accuracy: {vader_accuracy:.2f}')
+```
+
+The accuracy scores for TextBlob and VADER are quite close. TextBlob has slighly higher accuracy but not significant, which means both TextBlob and VADER are suitable for sentiment analysis on this dataset
+
+## Top Modeling with LDA
+
+### Preprocessing for Topic Modeling
+
+```{python}
+from sklearn.feature_extraction.text import TfidfVectorizer
+# Recall the positive and negative reviews from the sensitivity analysis using TextBlob
+positive_reviews = yelp_df[yelp_df['textblob_score'] > 0]
+negative_reviews= yelp_df[yelp_df['textblob_score'] < 0]
+
+# Vectorize the text data using TF-IDF
+vectorizer_positive = TfidfVectorizer(max_features=5000, stop_words='english')
+vectorizer_negative = TfidfVectorizer(max_features=5000, stop_words='english')
+
+positive_tfidf = vectorizer_positive.fit_transform(positive_reviews['tokens'].apply(lambda x: ' '.join(x)))
+negative_tfidf = vectorizer_negative.fit_transform(negative_reviews['tokens'].apply(lambda x: ' '.join(x)))
+```
+
+### Topic Modeling for Positive Reviews
+
+```{python}
+from sklearn.decomposition import LatentDirichletAllocation
+
+# Topic Modeling for Positive Reviews
+n_topics = 5  # Number of topics
+lda_positive = LatentDirichletAllocation(n_components=n_topics, random_state=42)
+lda_positive.fit(positive_tfidf)
+
+# Display the topics for positive reviews
+def display_topics(model, feature_names, n_top_words):
+    for topic_idx, topic in enumerate(model.components_):
+        print(f"Topic #{topic_idx + 1}:")
+        print(" ".join([feature_names[i] for i in topic.argsort()[:-n_top_words - 1:-1]]))
+        print()
+
+n_top_words = 10
+tf_feature_names_positive = vectorizer_positive.get_feature_names_out()
+print("Positive Reviews Topics:")
+display_topics(lda_positive, tf_feature_names_positive, n_top_words)
+```
+
+#### Visualizing the Topic of Positive Reviews
+
+```{python}
+import pyLDAvis
+import pyLDAvis.lda_model
+
+# Prepare the LDA visualization for positive reviews
+pyLDAvis.enable_notebook()
+panel_positive = pyLDAvis.lda_model.prepare(lda_positive, positive_tfidf, vectorizer_positive)
+print("LDA Visualization for Positive Reviews")
+pyLDAvis.display(panel_positive)
+```
+
+### Topic Modeling for Negative Reviews
+
+```{python}
+# Topic Modeling for Negative Reviews
+lda_negative = LatentDirichletAllocation(n_components=n_topics, random_state=42)
+lda_negative.fit(negative_tfidf)
+
+# Display the topics for negative reviews
+print("Negative Reviews Topics:")
+tf_feature_names_negative = vectorizer_negative.get_feature_names_out()
+display_topics(lda_negative, tf_feature_names_negative, n_top_words)
+```
+
+#### Visualizing Negative Reviews
+
+```{python}
+# Prepare the LDA visualization for negative reviews
+panel_negative = pyLDAvis.lda_model.prepare(lda_negative, negative_tfidf, vectorizer_negative)
+print("LDA Visualization for Negative Reviews")
+pyLDAvis.display(panel_negative)
+```
+
+## Dimensionality Reduction with PCA
+
+### Positive Reviews
+
+```{python}
+from sklearn.decomposition import PCA
+
+# Apply PCA to reduce to 2 components
+pca = PCA(n_components=2)
+pca_positive = pca.fit_transform(positive_tfidf.toarray())
+
+# Plot the reduced data
+plt.figure(figsize=(10, 7))
+plt.scatter(pca_positive[:, 0], pca_positive[:, 1], c='blue', edgecolor='k')
+plt.title('PCA of Positive Yelp Reviews')
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
+plt.show()
+```
+
+### Negative Reviews
+
+```{python}
+pca_negative = pca.fit_transform(negative_tfidf.toarray())
+
+# Plot the reduced data
+plt.figure(figsize=(10, 7))
+plt.scatter(pca_negative[:, 0], pca_negative[:, 1], c='blue', edgecolor='k')
+plt.title('PCA of Positive Yelp Reviews')
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
+plt.show()
+```
+

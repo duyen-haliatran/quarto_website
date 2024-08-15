@@ -234,7 +234,7 @@ What is the average amount of debt owed by countries across different debt indic
 <p>
 The first line of code connects us to the <code>international_debt</code> database where the table <code>international_debt</code> is residing. Let’s first <code>SELECT</code> <em>all</em> of the columns from the <code>international_debt</code> table. Also, we’ll limit the output to the first ten rows to keep the output clean.
 </p>
-<div id="3a08e8c9" class="cell" data-execution_count="1">
+<div id="e248f054" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sqlite3</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -359,7 +359,7 @@ From the first ten rows, we can see the amount of debt owed by <em>Afghanistan</
 <p>
 Without a count of unique countries, we will not be able to perform our statistical analyses holistically. In this section, we are going to extract the number of unique countries present in the table.
 </p>
-<div id="d1b39ea3" class="cell" data-dc="{&quot;key&quot;:&quot;12&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="2">
+<div id="1e80e29b" class="cell" data-dc="{&quot;key&quot;:&quot;12&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    COUNT(DISTINCT(country_name)) AS total_distinct_countries</span>
@@ -391,7 +391,7 @@ Done.</code></pre>
 <p>
 We can see there are a total of 124 countries present on the table. As we saw in the first section, there is a column called <code>indicator_name</code> that briefly specifies the purpose of taking the debt. Just beside that column, there is another column called <code>indicator_code</code> which symbolizes the category of these debts. Knowing about these various debt indicators will help us to understand the areas in which a country can possibly be indebted to.
 </p>
-<div id="64654295" class="cell" data-dc="{&quot;key&quot;:&quot;20&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="3">
+<div id="bca70c46" class="cell" data-dc="{&quot;key&quot;:&quot;20&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    DISTINCT indicator_code AS distinct_debt_indicators</span>
@@ -499,7 +499,7 @@ As mentioned earlier, the financial debt of a particular country represents its 
 <p>
 Let’s switch gears from the debt indicators now and find out the total amount of debt (in USD) that is owed by the different countries. This will give us a sense of how the overall economy of the entire world is holding up.
 </p>
-<div id="6e9fbfbe" class="cell" data-execution_count="4">
+<div id="aca25f0a" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    ROUND(SUM(debt)<span class="op">/</span><span class="dv">1000000</span>, <span class="dv">2</span>) AS total_debt</span>
@@ -534,7 +534,7 @@ Done.</code></pre>
 <p>
 Now that we have the exact total of the amounts of debt owed by several countries, let’s now find out the country that owns the highest amount of debt along with the amount. <strong>Note</strong> that this debt is the sum of different debts owed by a country across several categories. This will help to understand more about the country in terms of its socio-economic scenarios. We can also find out the category in which the country owns its highest debt. But we will leave that for now.
 </p>
-<div id="fc10d9ea" class="cell" data-dc="{&quot;key&quot;:&quot;36&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="5">
+<div id="90c5f14b" class="cell" data-dc="{&quot;key&quot;:&quot;36&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    country_name, SUM(debt) AS total_debt</span>
@@ -574,7 +574,7 @@ So, it was <em>China</em>. A more in-depth breakdown of China’s debts can be f
 <p>
 We now have a brief overview of the dataset and a few of its summary statistics. We already have an idea of the different debt indicators in which the countries owe their debts. We can dig even further to find out on an average how much debt a country owes? This will give us a better sense of the distribution of the amount of debt across different indicators.
 </p>
-<div id="8f5e310d" class="cell" data-dc="{&quot;key&quot;:&quot;44&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="6">
+<div id="a6082f99" class="cell" data-dc="{&quot;key&quot;:&quot;44&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    indicator_code AS debt_indicator,</span>
@@ -666,7 +666,7 @@ An interesting observation in the above finding is that there is a huge differen
 <p>
 We can investigate this a bit more so as to find out which country owes the highest amount of debt in the category of long term debts (<code>DT.AMT.DLXF.CD</code>). Since not all the countries suffer from the same kind of economic disturbances, this finding will allow us to understand that particular country’s economic condition a bit more specifically.
 </p>
-<div id="81924564" class="cell" data-execution_count="7">
+<div id="5c6fbbcb" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql </span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>SELECT </span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    country_name, </span>
@@ -708,7 +708,7 @@ China has the highest amount of debt in the long-term debt (<code>DT.AMT.DLXF.CD
 <p>
 We saw that long-term debt is the topmost category when it comes to the average amount of debt. But is it the most common indicator in which the countries owe their debt? Let’s find that out.
 </p>
-<div id="6df987c1" class="cell" data-dc="{&quot;key&quot;:&quot;60&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="8">
+<div id="ccc0a655" class="cell" data-dc="{&quot;key&quot;:&quot;60&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>SELECT indicator_code, COUNT(indicator_code) AS indicator_count</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>FROM international_debt</span>
@@ -826,7 +826,7 @@ Let’s change tracks from <code>debt_indicator</code>s now and focus on the amo
 <p>
 In this notebook, we took a look at debt owed by countries across the globe. We extracted a few summary statistics from the data and unraveled some interesting facts and figures. We also validated our findings to make sure the investigations are correct.
 </p>
-<div id="74e4494f" class="cell" data-dc="{&quot;key&quot;:&quot;68&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="9">
+<div id="a9f72c51" class="cell" data-dc="{&quot;key&quot;:&quot;68&quot;}" data-tags="[&quot;sample_code&quot;]" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>sql</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>SELECT country_name, MAX(debt) AS maximum_debt</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>FROM international_debt</span>
