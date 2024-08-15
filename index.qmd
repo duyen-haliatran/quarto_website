@@ -21,7 +21,10 @@ format:
 
 :::{#main-content}
 
-# Hello, I'm Duyen Tran 👋 - Business Analyst Extraordinaire
+<img src="files/profile_pic.jpg" alt="Description" style="border-radius: 50%;">
+
+
+# Hello, I'm Duyen Tran 👋 - Product Analyst | Digital Marketing Analyst
 
 ## 🌟 About Me
 
