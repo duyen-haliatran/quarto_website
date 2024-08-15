@@ -19,10 +19,6 @@ format:
     page-layout: full
 ---
 
-:::{#main-content}
-
-<img src="files/profile_pic.jpg" alt="Description" style="border-radius: 50%;">
-
 
 # Hello, I'm Duyen Tran 👋 - Product Analyst | Digital Marketing Analyst
 
@@ -50,10 +46,83 @@ With a background in diverse job experience, I pride myself on being the lynchpi
 
 ### 💼 My Work History
 
-- Product Manager/Analyst (Feb 2020 - Dec 2023)
-- Digital Marketing Analyst (Jul 2017 - Feb 2020)
-- Appraiser Intern (Jan 2017 - Jun 2017)
 
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            padding: 5px;
+            list-style-type: none;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 58%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #000;
+            z-index: -1;
+        }
+        .timeline-item {
+            text-align: center;
+            position: relative;
+        }
+        .timeline-item .circle {
+            width: 15px;
+            height: 15px;
+            background-color: #6ba292;
+            border-radius: 50%;
+            margin: 0 auto;
+            position: relative;
+            top: 13px;
+        }
+        .timeline-item .title {
+            font-weight: bold;
+        }
+        .timeline-item .subtitle {
+            font-style: italic;
+            color: #777;
+        }
+        .timeline-item .date {
+            font-weight: bold;
+            margin-top: 30px;
+        }
+    </style>
+    <title>Timeline</title>
+</head>
+<body>
+    <ul class="timeline">
+        <li class="timeline-item">
+            <div class="title">Appraiser Intern</div>
+            <div class="subtitle">Thanh Do Appraisal Group</div>
+            <div class="circle"></div>
+            <div class="date">Jan 2017</div>
+        </li>
+        <li class="timeline-item">
+            <div class="title">Digital Marketing Analyst</div>
+            <div class="subtitle">Ngoc Dung Aesthetic Company Limited</div>
+            <div class="circle"></div>
+            <div class="date">Jul 2017</div>
+        </li>
+        <li class="timeline-item">
+            <div class="title">Product Manager/Analyst</div>
+            <div class="subtitle">Advance Healthcare</div>
+            <div class="circle"></div>
+            <div class="date">Feb 2020 - Present</div>
+        </li>
+    </ul>
+</body>
+</html>
 ### 📈 Some of My Work:
 
 - **Financial Forecasting Tool**: Collaborated with finance experts to develop a tool that predicts quarterly revenue.
@@ -70,5 +139,3 @@ I'm keen on integrating more data science techniques into my BA toolkit. If you 
 ---
 
 ⭐️ From [DuyenTran](https://github.com/rsm-dtt006)
-
-:::
